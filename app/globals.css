@@ -1,0 +1,37 @@
+:root {
+  --ink: #1b2733;
+  --muted: #66707a;
+  --faint: #9aa3ab;
+  --rule: #e3e7eb;
+  --wash: #f6f8f9;
+  --teal: #177e7e;
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  --sans: "Helvetica Neue", Helvetica, "Segoe UI", Arial, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: #fff; color: var(--ink); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+a { color: inherit; text-decoration: none; }
+main { max-width: 860px; margin: 0 auto; padding: 72px 28px 96px; }
+h1 { font-family: var(--serif); font-weight: 400; font-size: 38px; margin: 0 0 8px; letter-spacing: -0.005em; }
+.lede { color: var(--muted); font-size: 17px; margin: 0 0 44px; }
+.list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
+.row { display: grid; grid-template-columns: 96px 1fr auto; gap: 20px; align-items: baseline; padding: 20px 0; border-bottom: 1px solid var(--rule); }
+.row:hover .title { color: var(--teal); }
+.date { color: var(--faint); font-size: 14px; font-variant-numeric: tabular-nums; }
+.title { font-family: var(--serif); font-size: 22px; line-height: 1.3; transition: color 0.15s; }
+.meta { color: var(--faint); font-size: 13px; margin-top: 4px; }
+.open { font-size: 14px; color: var(--muted); white-space: nowrap; }
+.empty { color: var(--muted); padding: 40px 0; }
+.how { margin-top: 56px; color: var(--muted); font-size: 14.5px; line-height: 1.6; }
+.how code { background: var(--wash); padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+@media (max-width: 600px) { .row { grid-template-columns: 1fr; gap: 6px; } .open { display: none; } }
+/* viewer */
+.viewer { height: 100vh; display: flex; flex-direction: column; }
+.bar { display: flex; align-items: center; gap: 18px; padding: 10px 18px; border-bottom: 1px solid var(--rule); font-size: 14px; color: var(--muted); }
+.back { white-space: nowrap; }
+.back:hover { color: var(--teal); }
+.bartitle { flex: 1; font-family: var(--serif); font-size: 17px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.baractions { display: flex; gap: 14px; align-items: center; }
+.baractions a:hover { color: var(--teal); }
+.fs { border: 0; background: var(--teal); color: #fff; font: inherit; font-size: 13.5px; padding: 6px 12px; border-radius: 7px; cursor: pointer; }
+.frame { flex: 1; width: 100%; border: 0; background: #fff; }
