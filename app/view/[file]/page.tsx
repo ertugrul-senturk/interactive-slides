@@ -28,6 +28,9 @@ export default async function ViewPage({ params }: { params: Promise<{ file: str
         <span className="bartitle">{deck.title}</span>
         <span className="baractions">
           <a href={deck.href} target="_blank" rel="noopener">open file</a>
+          {deck.pptx && (
+            <a className="dl" href={deck.pptx.href} download title={`${deck.pptx.sizeKB} KB`}>download .pptx</a>
+          )}
           <Viewer />
         </span>
       </header>

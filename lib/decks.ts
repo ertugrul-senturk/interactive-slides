@@ -7,6 +7,7 @@ export type Deck = {
   title: string;     // from <title> in the HTML, or the file name
   date: string | null; // YYYY-MM or YYYY-MM-DD prefix in the file name, if present
   sizeKB: number;
+  pptx: { href: string; sizeKB: number } | null; // PowerPoint version with the same name, if present
 };
 
 const DECKS_DIR = path.join(process.cwd(), "public", "decks");
@@ -19,6 +20,13 @@ function titleFrom(html: string, fallback: string): string {
 function dateFrom(file: string): string | null {
   const m = file.match(/^(\d{4}-\d{2}(?:-\d{2})?)/);
   return m ? m[1] : null;
+}
+
+function pptxFor(file: string): Deck["pptx"] {
+  const name = file.replace(/\.html$/i, ".pptx");
+  const full = path.join(DECKS_DIR, name);
+  if (!fs.existsSync(full)) return null;
+  return { href: `/decks/${encodeURIComponent(name)}`, sizeKB: Math.round(fs.statSync(full).size / 1024) };
 }
 
 export function getDecks(): Deck[] {
@@ -37,6 +45,7 @@ export function getDecks(): Deck[] {
         title: titleFrom(html, fallback),
         date: dateFrom(file),
         sizeKB: Math.round(stat.size / 1024),
+        pptx: pptxFor(file),
       };
     })
     .sort((a, b) => (b.date ?? "").localeCompare(a.date ?? "") || a.title.localeCompare(b.title));

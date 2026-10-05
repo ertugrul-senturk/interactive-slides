@@ -8,28 +8,34 @@ export default function Home() {
   return (
     <main>
       <h1>Paper slides</h1>
-      <p className="lede">Presentations for the reading seminar. Select one to open it. Inside the deck, use the arrow keys; click the deck once first so it has focus.</p>
+      <p className="lede">Presentations for the reading seminar. Select one to open it. Inside the deck, change slides with the arrow keys; clicking is for the interactive parts. Each deck can also be downloaded as a PowerPoint file.</p>
       {decks.length === 0 ? (
         <p className="empty">No decks yet. Drop an .html file into <code>public/decks</code>.</p>
       ) : (
         <ul className="list">
           {decks.map((d) => (
-            <li key={d.file}>
-              <Link className="row" href={`/view/${encodeURIComponent(d.file)}`}>
-                <span className="date">{d.date ?? ""}</span>
-                <span>
-                  <div className="title">{d.title}</div>
-                  <div className="meta">{d.file} · {d.sizeKB} KB</div>
-                </span>
-                <span className="open">open →</span>
+            <li key={d.file} className="row">
+              <span className="date">{d.date ?? ""}</span>
+              <Link href={`/view/${encodeURIComponent(d.file)}`}>
+                <div className="title">{d.title}</div>
+                <div className="meta">{d.file} · {d.sizeKB} KB</div>
               </Link>
+              <span className="actions">
+                {d.pptx && (
+                  <a className="dl" href={d.pptx.href} download title={`PowerPoint, ${d.pptx.sizeKB} KB`}>
+                    .pptx ↓
+                  </a>
+                )}
+                <Link className="open" href={`/view/${encodeURIComponent(d.file)}`}>open →</Link>
+              </span>
             </li>
           ))}
         </ul>
       )}
       <p className="how">
         To add a deck, put its .html file in <code>public/decks/</code> and push. Prefix the file name with a date
-        such as <code>2026-09-</code> to sort it, and the page title comes from the file&apos;s <code>&lt;title&gt;</code>.
+        such as <code>2026-09-</code> to sort it, and the page title comes from the file&apos;s <code>&lt;title&gt;</code>. Run <code>npm run pptx</code> to
+        create the PowerPoint version next to it.
       </p>
     </main>
   );
