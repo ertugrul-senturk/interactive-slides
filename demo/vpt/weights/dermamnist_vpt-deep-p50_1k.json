@@ -1,0 +1,36 @@
+{
+  "task": "dermamnist",
+  "method": "vpt-deep-p50_1k",
+  "classes": [
+    "actinic keratoses and intraepithelial carcinoma",
+    "basal cell carcinoma",
+    "benign keratosis-like lesions",
+    "dermatofibroma",
+    "melanoma",
+    "melanocytic nevi",
+    "vascular lesions"
+  ],
+  "backbone_id": "vit_base_patch16_224.orig_in21k",
+  "num_prompts": 50,
+  "deep": true,
+  "train_images": 1000,
+  "base_lr": 2.5,
+  "epochs": 100,
+  "select": "bal_acc",
+  "val": {
+    "acc": 79.66,
+    "bal_acc": 59.53,
+    "auc": 94.37
+  },
+  "test": {
+    "acc": 79.4,
+    "bal_acc": 63.29,
+    "auc": 92.72
+  },
+  "train_minutes": 7.8,
+  "backbone": 85798656,
+  "prompts": 460800,
+  "head": 5383,
+  "trainable": 466183,
+  "trainable_pct": 0.5433453409806326
+}

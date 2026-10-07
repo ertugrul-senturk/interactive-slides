@@ -1,0 +1,1332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Visual Prompt Tuning</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400;1,8..60,600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=Source+Code+Pro:wght@400;500&display=swap">
+<style>
+:root{
+  --paper:#FAF9F6;
+  --wash:#F0EEE8;
+  --ink:#1C1F23;
+  --ink-2:#4F555B;
+  --ink-3:#7F858B;
+  --rule:#DCD8CF;
+  --tuned:#BF3F2A;      /* learnable: prompts, head (the paper's red) */
+  --tuned-wash:#F5DED7;
+  --frozen:#2E5A88;     /* frozen backbone (the paper's blue) */
+  --frozen-wash:#DFE7F0;
+  --serif:"Source Serif 4","Iowan Old Style","Palatino Linotype",Georgia,serif;
+  --sans:"Source Sans 3","Segoe UI","Helvetica Neue",Arial,sans-serif;
+  --mono:"Source Code Pro",Consolas,"SF Mono",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--paper);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+body{overflow:hidden}
+::selection{background:var(--tuned-wash);color:var(--ink)}
+#stage{position:absolute;left:0;top:0;width:1280px;height:720px;transform-origin:0 0}
+.slide{position:absolute;inset:0;padding:58px 84px 56px;background:var(--paper);visibility:hidden}
+.slide.active{visibility:visible;animation:enter .22s cubic-bezier(.2,.8,.2,1)}
+@keyframes enter{from{opacity:0}to{opacity:1}}
+.slide aside.notes{display:none}
+
+/* type roles */
+h1{font-family:var(--serif);font-weight:600;font-size:76px;line-height:1.02;letter-spacing:-.018em;margin:0}
+h2{font-family:var(--serif);font-weight:600;font-size:38px;line-height:1.16;letter-spacing:-.01em;margin:0 0 34px;max-width:1080px;text-wrap:balance}
+h3{font-family:var(--serif);font-weight:600;font-size:21px;line-height:1.25;margin:0 0 8px}
+p{font-size:22px;line-height:1.5;margin:0 0 14px;max-width:62ch}
+.sub{font-size:19px;line-height:1.45;color:var(--ink-2)}
+.src{position:absolute;left:84px;bottom:26px;font-size:13.5px;color:var(--ink-3);max-width:1100px}
+.num{font-variant-numeric:tabular-nums lining-nums}
+.t{color:var(--tuned)} .f{color:var(--frozen)}
+b,strong{font-weight:600}
+.m{font-family:var(--serif);font-style:italic;font-size:1.06em}
+.m sub,.m sup{font-style:normal;font-size:.68em}
+.mr{font-family:var(--serif);font-style:normal}
+code,.code{font-family:var(--mono);font-size:.84em}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:start}
+.cols.wide-left{grid-template-columns:1.25fr 1fr}
+.cols.wide-right{grid-template-columns:1fr 1.35fr}
+.hr{height:1px;background:var(--rule);margin:22px 0}
+.key{display:flex;gap:22px;font-size:14.5px;color:var(--ink-2);align-items:center}
+.key span{display:inline-flex;gap:8px;align-items:center}
+.sw{width:14px;height:14px;border-radius:2px;display:inline-block}
+.sw.tuned{background:var(--tuned)} .sw.frozen{background:var(--frozen)} .sw.comp{background:var(--tuned-wash);outline:1px solid #E3B6A9}
+
+/* build steps */
+[data-step]{transition:opacity .3s ease}
+[data-step].pre{opacity:0}
+
+/* tokens */
+.tok{display:inline-block;width:20px;height:20px;border-radius:3px;flex:none}
+.tok.cls{background:var(--paper);border:2px solid var(--ink)}
+.tok.p{background:var(--tuned)}
+.tok.e{background:var(--frozen-wash);border:1px solid #B9C8DA}
+.tokrow{display:flex;gap:5px;align-items:center}
+.ell{color:var(--ink-3);font-size:18px;padding:0 4px}
+
+/* equations */
+.eq{font-family:var(--serif);font-size:25px;line-height:1.7;color:var(--ink)}
+.eq .m{font-size:1em}
+.eq sub,.eq sup{font-family:var(--serif);font-size:.66em}
+.eq .lbl{font-family:var(--sans);font-size:14px;color:var(--ink-3);margin-left:14px;font-style:normal}
+
+/* tables */
+table.tb{border-collapse:collapse;font-size:19.5px;width:100%}
+table.tb th{font-weight:600;font-size:15px;color:var(--ink-2);text-align:right;padding:0 0 9px 18px;border-bottom:1.5px solid var(--ink);vertical-align:bottom}
+table.tb th:first-child,table.tb td:first-child{text-align:left;padding-left:0}
+table.tb td{padding:9px 0 9px 18px;text-align:right;border-bottom:1px solid var(--rule);font-variant-numeric:tabular-nums lining-nums;white-space:nowrap}
+table.tb tr.grp td{border-bottom:none;padding-top:14px;padding-bottom:2px;font-size:13px;color:var(--ink-3);text-align:left}
+table.tb tr.hl td{color:var(--tuned);font-weight:600}
+table.tb tr.ref td{color:var(--ink)}
+table.tb td.dim,.dim{color:var(--ink-3)}
+table.tb .w{font-size:13px;color:var(--ink-3);font-weight:400;margin-left:3px}
+table.tb tr.hl .w{color:var(--tuned)}
+.bar{display:inline-block;height:9px;background:var(--ink-3);vertical-align:middle;margin-right:8px;border-radius:1px}
+tr.hl .bar{background:var(--tuned)}
+
+/* charts */
+svg text{font-family:var(--sans);fill:var(--ink-2);font-size:13px}
+svg .axis line,svg .axis path{stroke:var(--ink-3);stroke-width:1}
+svg .grid line{stroke:var(--rule);stroke-width:1}
+svg .lab{font-size:14.5px;fill:var(--ink)}
+svg .lab.t{fill:var(--tuned);font-weight:600}
+svg .lab.dim{fill:var(--ink-3)}
+
+/* segmented control */
+.seg{display:inline-flex;border:1px solid var(--rule);border-radius:4px;overflow:hidden;background:var(--paper)}
+.seg button{font:inherit;font-size:15px;padding:7px 16px;border:0;background:none;color:var(--ink-2);cursor:pointer}
+.seg button+button{border-left:1px solid var(--rule)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.seg button:focus-visible,.btn:focus-visible,input:focus-visible{outline:2px solid var(--frozen);outline-offset:2px}
+
+/* title slide */
+#s-title{padding:0}
+#s-title .inner{position:absolute;left:84px;top:118px;right:84px}
+#s-title .lede{font-family:var(--serif);font-size:25px;line-height:1.4;color:var(--ink-2);margin:22px 0 0;max-width:30ch}
+#s-title .by{position:absolute;left:84px;bottom:62px;font-size:17px;line-height:1.55;color:var(--ink-2)}
+#s-title .by b{color:var(--ink)}
+#s-title .me{position:absolute;right:84px;bottom:62px;text-align:right;font-size:17px;line-height:1.55;color:var(--ink-2)}
+#title-fig{position:absolute;right:84px;top:118px}
+
+/* storage slide */
+.copies{display:grid;grid-template-columns:repeat(6,58px);gap:8px}
+.copies i{display:block;width:58px;height:58px;background:var(--tuned);opacity:.88;border-radius:2px}
+.one{position:relative;width:58px;height:58px;background:var(--frozen);border-radius:2px}
+.slivers{display:flex;flex-direction:column;gap:0;width:58px;margin-top:6px}
+.big{font-family:var(--serif);font-size:56px;line-height:1;font-weight:600;letter-spacing:-.01em}
+
+/* protocol schematic */
+.protos{display:grid;grid-template-columns:repeat(7,1fr);gap:18px;margin-top:6px}
+.proto{display:flex;flex-direction:column;align-items:center}
+.proto .name{font-size:18px;font-weight:600;margin-top:12px}
+.proto .acc{font-family:var(--serif);font-size:30px;margin-top:2px}
+.proto .grpn{font-size:14px;color:var(--ink-3);height:22px;white-space:nowrap}
+.stack{display:flex;flex-direction:column;justify-content:flex-end;gap:3.5px;width:84px;height:250px}
+.stack .hd{height:16px;border-radius:2px}
+.stack .ly{height:14px;border-radius:2px;background:var(--frozen);position:relative}
+.stack .ly.tu{background:var(--tuned)}
+.stack .ly .bias{position:absolute;left:0;right:0;top:5px;height:2px;background:var(--tuned)}
+.stack .ly .ad{position:absolute;right:6px;top:2px;width:16px;height:8px;background:var(--tuned);border-radius:1px}
+.side{position:absolute;left:84px;top:0;width:12px;bottom:19px;background:var(--tuned);border-radius:2px}
+
+/* NLP prompting */
+.nlp{display:grid;grid-template-columns:230px 1fr;gap:26px 26px;align-items:center;margin-top:16px}
+.nlp .k{font-size:18px;color:var(--ink-2);line-height:1.35}
+.words{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.words span{font-size:20px;padding:7px 12px;border-radius:3px;background:var(--wash);border:1px solid var(--rule)}
+.words span.soft{background:var(--tuned);border-color:var(--tuned);color:#fff;font-family:var(--serif);font-style:italic;padding:5px 9px}
+.words span.hand{background:#fff;border-style:dashed;border-color:var(--ink-3)}
+.words .arrow{border:0;background:none;color:var(--ink-3);padding:0 4px}
+.words .model{background:var(--frozen);border-color:var(--frozen);color:#fff}
+.question{font-family:var(--serif);font-size:44px;line-height:1.2;margin-top:56px;max-width:none}
+
+/* ViT recap */
+.vit{display:flex;align-items:center;gap:26px;margin-top:4px}
+.patchimg{position:relative;width:224px;height:224px;background-size:cover;background-position:center;border-radius:2px}
+.patchimg::after{content:"";position:absolute;inset:0;background-image:linear-gradient(to right,rgba(250,249,246,.9) 1.5px,transparent 1.5px),linear-gradient(to bottom,rgba(250,249,246,.9) 1.5px,transparent 1.5px);background-size:16px 16px}
+.arrowr{width:34px;height:2px;background:var(--ink-3);position:relative;flex:none}
+.arrowr::after{content:"";position:absolute;right:-1px;top:-4px;border:5px solid transparent;border-left:7px solid var(--ink-3);border-right:0}
+.layerbox{width:150px;padding:14px 12px;border-radius:3px;background:var(--frozen);color:#fff;text-align:center;font-size:16px;line-height:1.3}
+.headbox{width:86px;padding:14px 10px;border-radius:3px;background:var(--wash);border:1px solid var(--rule);text-align:center;font-size:16px}
+.shape{font-family:var(--mono);font-size:13.5px;color:var(--ink-3);margin-top:8px;text-align:center}
+.facts{display:grid;grid-template-columns:repeat(4,auto);justify-content:start;gap:4px 56px;margin-top:44px}
+.facts .k{font-size:16px;color:var(--ink-3)}
+.facts .v{font-family:var(--serif);font-size:38px}
+
+/* VPT method figure */
+#vptfig svg text{font-size:12.5px}
+.method-note{font-size:19px;color:var(--ink-2);line-height:1.5;margin-top:18px;max-width:46ch}
+
+/* calculator */
+.calc{display:grid;grid-template-columns:330px 1fr;gap:44px}
+.ctl{margin-bottom:18px}
+.ctl label,.ctl .lab{display:flex;justify-content:space-between;font-size:15px;color:var(--ink-2);margin-bottom:7px}
+.ctl output{color:var(--ink);font-variant-numeric:tabular-nums;font-weight:600}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:22px;background:transparent;margin:0;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:3px;background:var(--rule)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--ink);margin-top:-6.5px}
+input[type=range]::-moz-range-track{height:3px;background:var(--rule)}
+input[type=range]::-moz-range-thumb{width:16px;height:16px;border:0;border-radius:50%;background:var(--ink)}
+.readout{display:grid;grid-template-columns:1fr auto;column-gap:24px;font-size:19px}
+.readout div{padding:8.5px 0;border-bottom:1px solid var(--rule)}
+.readout .v{text-align:right;font-variant-numeric:tabular-nums lining-nums;font-weight:600}
+.readout .x{font-weight:400;color:var(--ink-3);font-size:14.5px;margin-left:8px}
+.readout .hlv{color:var(--tuned)}
+.formula{font-size:13.5px;color:var(--ink-3);font-weight:400;display:block;margin-top:1px}
+
+/* lists */
+ul.plain{list-style:none;margin:0;padding:0}
+ul.plain li{font-size:21.5px;line-height:1.45;margin:0 0 18px;max-width:60ch}
+ul.plain li .lead{font-weight:600}
+.setup{display:grid;grid-template-columns:1fr 1.25fr 1fr;gap:48px}
+.setup h3{border-bottom:1.5px solid var(--ink);padding-bottom:8px;margin-bottom:12px}
+.setup p,.setup li{font-size:21px;line-height:1.48}
+.setup ul{margin:0;padding:0 0 0 18px}
+.setup li{margin-bottom:12px}
+
+/* questions slide */
+.qs{display:grid;grid-template-columns:1fr 1fr;gap:48px 72px;margin-top:14px}
+.qs h3{font-size:26px;margin-bottom:12px}
+.qs p{font-size:21px;color:var(--ink-2)}
+
+/* code */
+pre.code{font-family:var(--mono);font-size:13.5px;line-height:1.62;background:var(--wash);border:1px solid var(--rule);border-radius:3px;padding:16px 20px;margin:0;color:var(--ink);white-space:pre}
+pre.code .c{color:var(--ink-3)}
+pre.code .hl{color:var(--tuned);font-weight:500}
+
+/* demo */
+#s-demo{padding-top:44px}
+#s-demo h2{margin-bottom:20px}
+.demo{display:grid;grid-template-columns:340px 1fr;gap:48px}
+.drop{position:relative;width:340px;height:300px;border-radius:3px;background:var(--wash);border:1px dashed var(--ink-3);display:grid;place-items:center;overflow:hidden;cursor:pointer}
+.drop img{width:100%;height:100%;object-fit:cover;display:block}
+.drop .hint{font-size:16px;color:var(--ink-2);text-align:center;line-height:1.5;padding:20px}
+.drop.over{border-color:var(--tuned);border-style:solid}
+.thumbs{display:grid;grid-template-columns:repeat(8,1fr);gap:5px;margin-top:6px}
+.thumbs button{padding:0;border:2px solid transparent;border-radius:3px;background:none;cursor:pointer;aspect-ratio:1;overflow:hidden}
+.thumbs button img{width:100%;height:100%;object-fit:cover;display:block}
+.thumbs button[aria-pressed="true"]{border-color:var(--ink)}
+.res{display:grid;grid-template-columns:1fr 1fr;gap:40px}
+.res h3{font-size:20px;margin-bottom:2px}
+.res .meta{font-size:14.5px;color:var(--ink-3);margin-bottom:14px}
+.row5{display:grid;grid-template-columns:1fr 58px;gap:2px 10px;align-items:center;margin-bottom:9px}
+.row5 .nm{font-size:16.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row5 .pc{font-size:15.5px;text-align:right;font-variant-numeric:tabular-nums}
+.row5 .tr{grid-column:1/-1;height:6px;background:var(--wash);border-radius:1px;overflow:hidden}
+.row5 .tr i{display:block;height:100%;background:var(--ink-3);width:0;transition:width .5s cubic-bezier(.2,.8,.2,1)}
+.vptcol .row5:first-of-type .tr i{background:var(--tuned)}
+.lincol .row5:first-of-type .tr i{background:var(--ink)}
+.row5.empty .nm{color:var(--ink-3)}
+.timing{display:grid;grid-template-columns:auto auto;justify-content:start;gap:3px 18px;font-size:15px;color:var(--ink-2);margin-top:12px}
+.timing .v{font-variant-numeric:tabular-nums;color:var(--ink);font-weight:600}
+.status{position:absolute;left:84px;bottom:24px;right:84px;display:flex;gap:16px;align-items:center;font-size:14px;color:var(--ink-3)}
+.status .dot{width:8px;height:8px;border-radius:50%;background:var(--ink-3)}
+.status.ok .dot{background:#3C8A4E} .status.err .dot{background:var(--tuned)} .status.busy .dot{background:#C99A2E}
+.status .grow{flex:1}
+.status .disc{color:var(--ink-2)}
+.truth{font-size:15px;color:var(--ink-2);margin-top:8px;min-height:22px}
+.truth b{color:var(--ink)}
+.regime{display:flex;align-items:center;gap:14px;margin-bottom:22px}
+.lab2{font-size:15px;color:var(--ink-2)}
+.btn{font:inherit;font-size:15px;padding:7px 14px;border:1px solid var(--rule);border-radius:4px;background:var(--paper);color:var(--ink);cursor:pointer}
+.btn:hover{border-color:var(--ink-3)}
+.btn.primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.btn:disabled{opacity:.45;cursor:default}
+.status input{font:inherit;font-size:13.5px;width:250px;padding:5px 8px;border:1px solid var(--rule);border-radius:3px;background:var(--paper);color:var(--ink)}
+
+/* takeaways */
+.take{max-width:980px}
+.take p{font-family:var(--serif);font-size:31px;line-height:1.28;margin:0 0 30px;max-width:none}
+.take p .sub{font-family:var(--sans);font-size:20px;display:block;margin-top:8px}
+
+/* references */
+ol.refs{margin:0;padding:0;list-style:none;columns:2;column-gap:56px}
+ol.refs li{font-size:16px;line-height:1.45;margin:0 0 14px;break-inside:avoid;color:var(--ink-2)}
+ol.refs li i{color:var(--ink)}
+
+
+/* demo, multi-task */
+.seg.tasks{margin:-10px 0 20px}
+.seg.tasks button{font-size:16px;padding:8px 18px}
+.seg.tasks button span{color:var(--ink-3);font-size:13.5px;margin-left:6px}
+.seg.tasks button[aria-pressed="true"] span{color:#C9CCD0}
+.flash{animation:flash .9s ease}
+@keyframes flash{from{background:var(--tuned-wash)}to{background:transparent}}
+.mixed{display:grid;grid-template-columns:repeat(3,1fr);gap:44px}
+.mx img{width:100%;aspect-ratio:1;object-fit:cover;display:block;border-radius:3px;max-height:250px;max-width:250px}
+.mx .tn{font-family:var(--serif);font-size:20px;font-weight:600;margin:12px 0 2px}
+.mx .tf{font-size:13.5px;color:var(--ink-3);margin-bottom:10px}
+.mx .truth{margin:0 0 10px}
+.mixed-foot{display:flex;gap:22px;align-items:center;margin-top:18px;font-size:16px;color:var(--ink-2)}
+#mixed .row5:first-of-type .tr i{background:var(--tuned)}
+
+
+/* three-method comparison */
+table.cmp th{text-align:left;padding-left:28px;font-size:17px;color:var(--ink)}
+table.cmp th:first-child{padding-left:0}
+table.cmp tr.pics th{border-bottom:none;padding-bottom:4px}
+table.cmp td{text-align:left;padding:9px 0 9px 28px;white-space:normal;font-size:18.5px;line-height:1.3}
+table.cmp td:first-child{color:var(--ink-2);font-size:16.5px;width:270px;padding-left:0}
+table.cmp td.vp{color:var(--tuned);font-weight:600}
+table.cmp td .x{display:inline;font-size:14px;color:var(--ink-3);font-weight:400;margin-left:8px}
+.mini{display:flex;flex-direction:column;gap:2px;width:120px}
+.mini i{display:block;height:3px;border-radius:1px;background:var(--frozen)}
+.mini i.hd{height:6px;background:var(--tuned);margin-bottom:1px}
+.mini i.tu{background:var(--tuned)}
+.mini i.pr{background:linear-gradient(to right,var(--tuned) 0 22%,var(--frozen) 22%)}
+.res3{display:grid;grid-template-columns:repeat(3,1fr);gap:30px}
+.mcol h3{font-size:19px;margin-bottom:1px}
+.mcol .meta{font-size:13.5px;color:var(--ink-3);margin-bottom:12px;min-height:18px}
+.mcol .row5 .nm{font-size:15px}
+.mcol .row5 .pc{font-size:14.5px}
+.mcol .mtime{font-size:13.5px;color:var(--ink-3);margin-top:8px;font-variant-numeric:tabular-nums}
+.mcol[data-m="vpt"] .row5:first-of-type .tr i{background:var(--tuned)}
+.mcol .row5:first-of-type .tr i{background:var(--ink)}
+.basebox{border:1.5px solid var(--frozen);background:var(--frozen-wash);border-radius:3px;padding:10px 16px;margin-bottom:0}
+.basebox .bt{font-size:17px;color:var(--ink)}
+.basebox .bt b{color:var(--frozen)}
+.basebox .bs{font-size:14px;color:var(--ink-2);margin-top:2px;line-height:1.4}
+.res3 .rel{font-size:13px;padding:16px 0 6px;margin-bottom:6px;position:relative}
+.res3 .rel::before{content:"";position:absolute;left:18px;top:0;height:13px;width:2px;background:var(--frozen)}
+.res3 .rel.frozen{color:var(--frozen)}
+.res3 .rel.own{color:var(--tuned)}
+.res3 .rel.own::before{background:var(--tuned);width:2px;background-image:none;border-left:2px dashed var(--tuned);background:none}
+
+
+.slopes{display:grid;grid-template-columns:repeat(3,1fr);gap:28px}
+.slopes .st{font-family:var(--serif);font-size:20px;font-weight:600;margin:0 0 2px}
+.slopes .ss{font-size:14px;color:var(--ink-3);margin-bottom:4px}
+
+@media (prefers-reduced-motion:reduce){.slide,[data-step],.row5 .tr i{transition:none}}
+</style>
+</head>
+<body>
+<div id="stage">
+
+<!-- ============================================================ 1 -->
+<section class="slide" id="s-title" data-title="Title">
+  <div class="inner">
+    <h1>Visual Prompt<br>Tuning</h1>
+    <p class="lede">Adapting a frozen vision Transformer by learning a handful of extra input tokens</p>
+  </div>
+  <div id="title-fig"></div>
+  <div class="by">
+    <b>Menglin Jia, Luming Tang,</b> Bor-Chun Chen, Claire Cardie, Serge Belongie, Bharath Hariharan, Ser-Nam Lim<br>
+    Cornell University · Meta AI · University of Copenhagen · ECCV 2022
+  </div>
+  <div class="me">Presented by <b>Ertugrul Senturk</b><br>October 2026</div>
+  <aside class="notes">This is the first paper in a short series on parameter-efficient fine-tuning. VPT is the vision paper that took prompt tuning from NLP and asked whether it works for image encoders. Spoiler: for supervised ViTs it works surprisingly well, and at the end I will run a model I trained with it.</aside>
+</section>
+
+<!-- ============================================================ 2 -->
+<section class="slide" id="s-storage" data-title="The storage problem">
+  <h2>Full fine-tuning stores a new copy of the backbone for every task</h2>
+  <div class="cols" style="grid-template-columns:1fr 1fr;gap:80px;margin-top:20px">
+    <div>
+      <div class="copies" id="copies"></div>
+      <div style="margin-top:22px"><span class="big num">24.02×</span></div>
+      <p class="sub" style="margin-top:8px">Full fine-tuning on 24 tasks: 24 tuned copies of ViT-B, about 2.06 billion parameters.</p>
+    </div>
+    <div>
+      <div style="display:flex;gap:20px;align-items:flex-start">
+        <div><div class="one"></div><div class="slivers" id="slivers"></div></div>
+        <div class="sub" style="max-width:30ch;margin-top:2px">One frozen backbone, shared.<br>Below it, all 24 tasks' prompts and heads together, drawn to the same scale.</div>
+      </div>
+      <div style="margin-top:22px"><span class="big num t">1.18×</span></div>
+      <p class="sub" style="margin-top:8px">VPT-deep on the same 24 tasks: the backbone once, plus about 15M task parameters in total.</p>
+    </div>
+  </div>
+  <p class="src">Area is proportional to parameter count. ViT-B/16, 85.8M parameters. “Total params” column of Jia et al. 2022, Table 1. For scale: ViT-H has 632M parameters, ResNet-50 25M.</p>
+  <aside class="notes">This is the practical motivation. Each square on the left is a full ViT-Base. Fine-tune it on 24 tasks and you ship 24 of them. VPT keeps one frozen copy and stores only the task-specific bits, which for all 24 tasks together are about a fifth of one backbone. The question the paper asks is whether we can get this saving without losing accuracy.</aside>
+</section>
+
+<!-- ============================================================ 3 -->
+<section class="slide" id="s-protocols" data-title="Existing protocols">
+  <h2>The cheaper options tune only part of the model, and they give up accuracy</h2>
+  <div class="protos" id="protos"></div>
+  <div class="key" style="margin-top:34px">
+    <span><i class="sw tuned"></i>tuned</span><span><i class="sw frozen"></i>frozen</span>
+    <span style="margin-left:16px">Number: mean accuracy over the four task groups (FGVC, VTAB Natural, Specialized, Structured)</span>
+  </div>
+  <p class="src">ViT-B/16 pre-trained on ImageNet-21k, from Jia et al. 2022, Table 1. Bias and Adapter were popularized in NLP (BitFit; Houlsby et al.).</p>
+  <aside class="notes">Head-oriented methods treat the backbone as a feature extractor. Linear probing is the cheapest and the weakest. Backbone-oriented methods touch the inside: Bias tunes only the bias terms, Adapter inserts small bottleneck MLPs. Bias gets close to Full, but nothing here beats it. Keep 73.9 for Full in mind.</aside>
+</section>
+
+<!-- ============================================================ 4 -->
+<section class="slide" id="s-nlp" data-title="Prompting in NLP">
+  <h2>In NLP, a frozen model can be steered by learning its input</h2>
+  <div class="nlp">
+    <div class="k"><b style="color:var(--ink)">Prompting</b><br>GPT-3, 2020</div>
+    <div class="words"><span class="hand">Translate English to French:</span><span class="hand">cheese =&gt;</span><span class="arrow">→</span><span class="model">frozen LM</span><span class="arrow">→</span><span>fromage</span></div>
+    <div class="k"><b style="color:var(--ink)">Prompt tuning</b><br>Lester et al.; Li &amp; Liang, 2021</div>
+    <div class="words"><span class="soft">p<sub>1</sub></span><span class="soft">p<sub>2</sub></span><span class="soft">p<sub>3</sub></span><span class="soft">…</span><span class="soft">p<sub>k</sub></span><span>the movie was great</span><span class="arrow">→</span><span class="model">frozen LM</span><span class="arrow">→</span><span>positive</span></div>
+  </div>
+  <p class="sub" style="margin-top:26px;max-width:66ch">The prompt becomes <span class="t">continuous vectors</span> trained by gradient descent. Per task you store a few thousand numbers instead of the model, about 1000× less. In NLP it matches full fine-tuning only for very large models.</p>
+  <p class="question" data-step="1">Does the same idea work for an image encoder?</p>
+  <aside class="notes">Hand-written prompts are discrete and brittle. Prompt tuning replaces them with vectors in the embedding space and learns them. The open question in 2022 was whether this transfers to vision, where the inputs are patches, not words. Click to reveal the question.</aside>
+</section>
+
+<!-- ============================================================ 5 -->
+<section class="slide" id="s-vit" data-title="ViT recap">
+  <h2>A ViT reads an image as 196 patch tokens plus one class token</h2>
+  <div class="vit">
+    <div><div class="patchimg" id="vitimg"></div><div class="shape">224 × 224 × 3</div></div>
+    <div class="arrowr"></div>
+    <div>
+      <div class="tokrow" id="vittok"></div>
+      <div class="shape" style="text-align:left">[CLS] + 196 patches, each embedded to d = 768</div>
+    </div>
+    <div class="arrowr"></div>
+    <div><div class="layerbox">Transformer<br>layers <span class="m" style="color:#fff">L</span><sub>1</sub> … <span class="m" style="color:#fff">L<sub>N</sub></span></div><div class="shape">197 × 768</div></div>
+    <div class="arrowr"></div>
+    <div><div class="headbox">Head</div><div class="shape">final [CLS]</div></div>
+  </div>
+  <div class="eq" style="margin-top:44px">
+    [<span class="m">x</span><sub>i</sub>, <span class="m">E</span><sub>i</sub>] = <span class="m">L</span><sub>i</sub>([<span class="m">x</span><sub>i−1</sub>, <span class="m">E</span><sub>i−1</sub>]) &nbsp;&nbsp;<span class="m">i</span> = 1 … <span class="m">N</span><span class="lbl">each layer</span><br>
+    <span class="m">y</span> = Head(<span class="m">x</span><sub>N</sub>)<span class="lbl">classify from the final class token</span>
+  </div>
+  <div class="facts num">
+    <div class="k">patches <span class="m">m</span></div><div class="k">width <span class="m">d</span></div><div class="k">layers <span class="m">N</span></div><div class="k">parameters</div>
+    <div class="v">196</div><div class="v">768</div><div class="v">12</div><div class="v">85.8M</div>
+  </div>
+  <p class="sub" style="margin-top:22px">The base model in this talk and in the demo: ViT-B/16 pretrained on ImageNet-21k (14M everyday photos), the checkpoint the VPT paper uses.</p>
+  <aside class="notes">Same notation as the paper. x is the class token and E the patch embeddings at layer input i. ViT-B/16: 196 patches of 16 by 16, width 768, 12 layers. Everything that follows only changes the sequence that goes into these layers.</aside>
+</section>
+
+<!-- ============================================================ 6 -->
+<section class="slide" id="s-method" data-title="VPT: shallow and deep" data-steps="1">
+  <h2>VPT prepends <span class="m">p</span> learnable tokens and freezes everything else</h2>
+  <div class="cols" style="grid-template-columns:560px 1fr;gap:50px">
+    <div id="vptfig"></div>
+    <div>
+      <div class="seg" id="vptseg" role="group" aria-label="Variant"><button type="button" data-v="0" aria-pressed="true">VPT-shallow</button><button type="button" data-v="1" aria-pressed="false">VPT-deep</button></div>
+      <div class="eq" id="vpteq" style="margin-top:22px;font-size:23px"></div>
+      <p class="method-note" id="vptnote"></p>
+      <div class="key" style="margin-top:22px"><span><i class="sw tuned"></i>learned prompt</span><span><i class="sw comp"></i>computed, not stored</span><span><i class="sw frozen"></i>frozen</span></div>
+    </div>
+  </div>
+  <aside class="notes">Shallow: one set of p prompts goes in before layer 1. After that, the outputs at those positions, Z, are just activations. Deep: every layer gets its own fresh prompts, and the outputs at prompt positions are thrown away, which is the underscore in the equation. Prompts enter after the position embedding, so where they sit in the sequence does not matter. Only the red parts and the head are trained.</aside>
+</section>
+
+<!-- ============================================================ 7 -->
+<section class="slide" id="s-calc" data-title="Counting the parameters">
+  <h2>Counting what VPT trains, stores and computes</h2>
+  <div class="calc">
+    <div>
+      <div class="ctl"><div class="lab">Backbone</div><div class="seg" id="c-bb" role="group" aria-label="Backbone"><button type="button" data-b="B" aria-pressed="true">ViT-B/16</button><button type="button" data-b="L" aria-pressed="false">ViT-L/16</button><button type="button" data-b="H" aria-pressed="false">ViT-H/14</button></div></div>
+      <div class="ctl"><div class="lab">Variant</div><div class="seg" id="c-var" role="group" aria-label="Variant"><button type="button" data-v="shallow" aria-pressed="false">shallow</button><button type="button" data-v="deep" aria-pressed="true">deep</button></div></div>
+      <div class="ctl"><label for="c-p">Prompt length <span class="m">p</span><output id="o-p"></output></label><input type="range" id="c-p" min="0" max="7" step="1" value="3"></div>
+      <div class="ctl"><label for="c-c">Classes <span class="m">C</span><output id="o-c"></output></label><input type="range" id="c-c" min="2" max="1000" step="1" value="102"></div>
+      <div class="ctl"><label for="c-t">Tasks <span class="m">T</span><output id="o-t"></output></label><input type="range" id="c-t" min="1" max="100" step="1" value="24"></div>
+    </div>
+    <div class="readout" id="readout"></div>
+  </div>
+  <p class="src">Compute ratio counts multiply–adds per layer: 12·n·d² for the projections and MLP, plus 2·n²·d for attention, with n tokens. The paper measures 2× test latency at p = 200, in line with this estimate.</p>
+  <aside class="notes">This is the arithmetic from Section 3.2, made live. Defaults: ViT-B, deep, p = 50, Flowers with 102 classes, 24 tasks. 12 times 50 times 768 is 460,800 prompt parameters, plus the head. Move p to 200 to show that compute roughly doubles. Switch to ViT-H: storage savings grow with model size, and that is the argument for VPT.</aside>
+</section>
+
+<!-- ============================================================ 8 -->
+<section class="slide" id="s-setup" data-title="Experimental setup">
+  <h2>24 classification tasks, 7 baselines, one frozen ViT-B/16</h2>
+  <div class="setup">
+    <div>
+      <h3>Backbone</h3>
+      <p>ViT-B/16 pre-trained with labels on ImageNet-21k. Swin-B, ViT-L/H, ConvNets and self-supervised backbones come later.</p>
+    </div>
+    <div>
+      <h3>Tasks</h3>
+      <ul>
+        <li><b>FGVC</b>, 5 fine-grained sets: CUB-200, NABirds, Oxford Flowers, Stanford Dogs, Stanford Cars</li>
+        <li><b>VTAB-1k</b>, 19 tasks with 1,000 training images each:<br><span class="sub">Natural (7) · Specialized, e.g. medical and satellite (4) · Structured, e.g. counting and depth (8)</span></li>
+      </ul>
+    </div>
+    <div>
+      <h3>Tuning</h3>
+      <ul>
+        <li>Prompt length <span class="m">p</span> ∈ {1, 5, 10, 50, 100, 200}, chosen on the val split</li>
+        <li>SGD, learning rate and weight decay grid-searched for every method</li>
+        <li>100 epochs, 10 warm-up, cosine</li>
+      </ul>
+    </div>
+  </div>
+  <p class="src">Jia et al. 2022, Sec. 4.1 and Appendix A, Table 6.</p>
+  <aside class="notes">VTAB-1k is the important part: only 1,000 training images per task, which is the low-data regime where efficient methods tend to shine. Note that p is tuned per task. We come back to that.</aside>
+</section>
+
+<!-- ============================================================ 9 -->
+<section class="slide" id="s-main" data-title="Main results">
+  <h2>VPT-deep beats full fine-tuning on 20 of the 24 tasks</h2>
+  <table class="tb" id="t1">
+    <thead><tr><th style="width:190px">ViT-B/16</th><th style="text-align:left;padding-left:30px">Total params, 24 tasks</th><th>FGVC (5)</th><th>Natural (7)</th><th>Specialized (4)</th><th>Structured (8)</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <p class="sub" style="margin-top:16px">Average test accuracy (%). Small numbers are the tasks won against Full.</p>
+  <p class="src">Jia et al. 2022, Table 1.</p>
+  <aside class="notes">Read the red row. It beats Full on FGVC, Natural and Structured, and loses slightly on Specialized. The biggest gain is on Structured: 55 versus 47.6. Those tasks, counting and distances, are the furthest from ImageNet. In the paper's words, this is unlike NLP, where prompt tuning only matches Full.</aside>
+</section>
+
+<!-- ============================================================ 10 -->
+<section class="slide" id="s-scatter" data-title="Accuracy against storage">
+  <h2>It moves the trade-off rather than sitting on it</h2>
+  <div id="scatter" style="margin-top:-4px"></div>
+  <p class="src">Mean of the four task-group averages in Jia et al. 2022, Table 1 (unweighted). Horizontal axis is log scale.</p>
+  <aside class="notes">Same table as one picture. Every other efficient method sits below Full. VPT-deep sits up and to the left of it: less storage and higher accuracy.</aside>
+</section>
+
+<!-- ============================================================ 11 -->
+<section class="slide" id="s-where" data-title="Where to put the prompts">
+  <h2>Prompts work best as extra tokens in embedding space</h2>
+  <div id="whereplot"></div>
+  <p class="src">Jia et al. 2022, Fig. 5. Add: summed onto the patch embeddings instead of prepended. Prepend-pixel / Concat-channel: learned pixels or an extra input channel before the patch embedding.</p>
+  <aside class="notes">Two lessons. First, prepending beats adding: keeping the patch tokens untouched and giving attention extra tokens to look at is what matters. Second, prompts in pixel space are much worse. Concatenating a channel loses about 30 points on Natural. The latent space after the embedding is where task information is easiest to inject.</aside>
+</section>
+
+<!-- ============================================================ 12 -->
+<section class="slide" id="s-length" data-title="Prompt length per task">
+  <h2>The best prompt length ranges from 5 to 200 across tasks</h2>
+  <div class="cols" style="grid-template-columns:1.3fr 1fr;gap:56px">
+    <table class="tb">
+      <thead><tr><th>FGVC task</th><th>chosen <span class="m">p</span></th><th>tuned %</th><th>Linear</th><th>Full</th><th>VPT-deep</th></tr></thead>
+      <tbody>
+        <tr><td>CUB-200</td><td>10</td><td>0.29</td><td class="dim">85.3</td><td>87.3</td><td class="t"><b>88.5</b></td></tr>
+        <tr><td>NABirds</td><td>50</td><td>1.02</td><td class="dim">75.9</td><td>82.7</td><td class="t"><b>84.2</b></td></tr>
+        <tr><td>Oxford Flowers</td><td>5</td><td>0.14</td><td class="dim">97.9</td><td>98.8</td><td class="t"><b>99.0</b></td></tr>
+        <tr><td>Stanford Dogs</td><td>100</td><td>1.17</td><td class="dim">86.2</td><td>89.4</td><td class="t"><b>90.2</b></td></tr>
+        <tr><td>Stanford Cars</td><td>200</td><td>2.27</td><td class="dim">51.3</td><td><b>84.5</b></td><td class="t">83.6</td></tr>
+      </tbody>
+    </table>
+    <ul class="plain" style="margin-top:4px">
+      <li><span class="lead">Harder shift needs more prompts.</span> Cars is far from ImageNet: Linear gets 51.3, and VPT needs 200 prompts to reach 83.6.</li>
+      <li><span class="lead">Deeper is better.</span> Accuracy rises with the number of prompted layers, and early layers matter more than late ones.</li>
+      <li><span class="lead">One prompt already helps.</span> With <span class="m">p</span> = 1, VPT-deep still beats Adapter and MLP heads on VTAB.</li>
+    </ul>
+  </div>
+  <p class="src">Jia et al. 2022, Table 14 (per task), Fig. 6 (length) and Fig. 7 (depth).</p>
+  <aside class="notes">This is the only VPT-specific hyperparameter, but it matters. Flowers needs 5 prompts. Cars needs 200, which is as many tokens as the image itself. Flowers is close to saturated, which is why the live demo uses a medical dataset instead.</aside>
+</section>
+
+<!-- ============================================================ 13 -->
+<section class="slide" id="s-beyond" data-title="Other backbones and tasks">
+  <h2>The result holds for larger ViTs and gets weaker elsewhere</h2>
+  <table class="tb" style="font-size:17.5px">
+    <thead><tr><th style="width:250px">Setting</th><th style="text-align:left;padding-left:24px">What happens</th><th style="text-align:left;padding-left:24px">Source</th></tr></thead>
+    <tbody>
+      <tr><td><b>ViT-L, ViT-H</b></td><td style="text-align:left;padding-left:24px;white-space:normal">VPT-deep still beats Full on Natural and Structured, ties on Specialized</td><td style="text-align:left;padding-left:24px" class="dim">Fig. 4</td></tr>
+      <tr><td><b>Swin-B</b></td><td style="text-align:left;padding-left:24px;white-space:normal">Best of the efficient methods, but Full wins overall (Structured 53.4 vs 59.7)</td><td style="text-align:left;padding-left:24px" class="dim">Table 2</td></tr>
+      <tr><td><b>ADE20K segmentation</b><br><span class="sub">SETR, ViT-L</span></td><td style="text-align:left;padding-left:24px;white-space:normal">42.1 mIoU with 13.4M tuned parameters vs 48.3 for Full with 318M. About the same as Bias.</td><td style="text-align:left;padding-left:24px" class="dim">Table 3</td></tr>
+      <tr><td><b>ConvNets</b><br><span class="sub">prompts as padded pixels</span></td><td style="text-align:left;padding-left:24px;white-space:normal">ConvNeXt-B: beats Full on 8 of 19 tasks. ResNet-50: no clear winner.</td><td style="text-align:left;padding-left:24px" class="dim">Table 5</td></tr>
+    </tbody>
+  </table>
+  <p class="src">Jia et al. 2022, Sec. 4.2 and 4.4.</p>
+  <aside class="notes">Honest summary: the headline is strongest for plain supervised ViTs on classification. Dense prediction still prefers full fine-tuning. Hierarchical models are less clear-cut.</aside>
+</section>
+
+<!-- ============================================================ 14 -->
+<section class="slide" id="s-ssl" data-title="Self-supervised backbones">
+  <h2>On self-supervised backbones the advantage disappears</h2>
+  <div id="sslplot"></div>
+  <p class="src">Mean over VTAB Natural, Specialized and Structured, ViT-B/16. Supervised: Jia et al. 2022, Table 1. MoCo v3 and MAE: Table 4.</p>
+  <aside class="notes">This is the slide I find most interesting, and it connects to the MAE paper from last time. On the supervised backbone VPT-deep is to the right of Full. On MoCo v3 it falls behind, and on MAE it collapses, close to linear probing, while Partial-1 almost matches Full. The authors leave the reason open. One hypothesis: MAE features are not linearly separable, as MAE's own linear-probing numbers show, and a few input tokens cannot reorganize them the way tuning the last block can.</aside>
+</section>
+
+<!-- ============================================================ 15 -->
+<section class="slide" id="s-cost" data-title="Cost">
+  <h2>Storage drops, but training memory and inference time do not</h2>
+  <table class="tb" style="max-width:930px">
+    <thead><tr><th style="width:230px">ViT-B/16, A100, batch 64</th><th>tuned params</th><th>train ms / img</th><th>train memory</th><th>test ms / img</th><th>test memory</th></tr></thead>
+    <tbody>
+      <tr class="ref"><td>Full</td><td>100%</td><td>358.7</td><td>11.7 GB</td><td>69.7</td><td>0.87 GB</td></tr>
+      <tr><td>Linear</td><td>0.09%</td><td>148.9</td><td>0.9 GB</td><td>64.4</td><td>0.87 GB</td></tr>
+      <tr><td>Bias</td><td>0.21%</td><td>296.9</td><td>10.1 GB</td><td>65.6</td><td>0.87 GB</td></tr>
+      <tr><td>Adapter, r = 64</td><td>0.36%</td><td>294.4</td><td>9.8 GB</td><td>68.3</td><td>0.87 GB</td></tr>
+      <tr class="hl"><td>VPT-deep, <span class="m">p</span> = 1</td><td>0.10%</td><td>213.6</td><td>10.3 GB</td><td>69.4</td><td>0.88 GB</td></tr>
+      <tr class="hl"><td>VPT-deep, <span class="m">p</span> = 200</td><td>2.19%</td><td>360.1</td><td>25.8 GB</td><td>140.8</td><td>1.85 GB</td></tr>
+    </tbody>
+  </table>
+  <ul class="plain" style="margin-top:22px;columns:2;column-gap:56px;max-width:none">
+    <li style="max-width:none">Gradients still flow back through every frozen layer to reach the prompts, so training memory stays close to Full.</li>
+    <li style="max-width:none">Longer sequences cost time at test, and prompts cannot be merged into the weights.</li>
+  </ul>
+  <p class="src">Jia et al. 2022, Appendix, Table 12.</p>
+  <aside class="notes">This is easy to miss in the main paper. The saving is in storage, not in training cost. At p = 200 training memory is more than double Full's, and inference is twice as slow. LoRA, which comes next, keeps the storage benefit but can be merged into the weights, so it adds nothing at inference.</aside>
+</section>
+
+<!-- ============================================================ 17 -->
+<section class="slide" id="s-three" data-title="Three ways to adapt">
+  <h2 style="margin-bottom:6px">Three ways to adapt the same pretrained ViT, measured</h2>
+  <p class="sub" style="margin-bottom:14px;max-width:none">All three start from one base model: ViT-B/16 pretrained on ImageNet-21k, 85.8M parameters. Linear and VPT keep it frozen; full fine-tuning changes every weight.</p>
+  <table class="tb cmp" id="cmp">
+    <thead>
+      <tr class="pics"><th></th><th><div class="mini" data-kind="linear"></div></th><th><div class="mini" data-kind="vpt"></div></th><th><div class="mini" data-kind="full"></div></th></tr>
+      <tr><th></th><th>Linear probe</th><th class="t">VPT-deep</th><th>Full fine-tuning</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+  <p class="src" id="cmp-src">Skin lesions (DermaMNIST), all 7,007 training images. Benchmark: batch 32 on an RTX 5070 Ti laptop GPU; inference on 2 CPU threads, like a free Hugging Face Space.</p>
+  <aside class="notes">Same backbone checkpoint, same data, three ways to adapt it, all run by me on one laptop GPU. Read across a row. Storage per task is the paper's argument: kilobytes, megabytes, or a whole new 343 MB model. Training memory is the paper's Table 12 point: VPT still backpropagates through every frozen layer, so it costs much more than a linear probe. VPT is also the only one that pays at inference, because it has 50 extra tokens per layer.</aside>
+</section>
+
+<!-- ============================================================ 17b -->
+<section class="slide" id="s-scale" data-title="Scaling with data, three tasks">
+  <h2 id="scale-title">VPT beats the linear probe in all six settings and stays within 4 points of full fine-tuning</h2>
+  <div class="slopes" id="slopes"></div>
+  <div class="key" style="margin-top:10px"><span><i class="sw" style="background:#9EA3A8"></i>Linear probe</span><span><i class="sw tuned"></i>VPT-deep</span><span><i class="sw" style="background:var(--paper);outline:2px solid var(--ink);outline-offset:-2px"></i>Full fine-tuning</span><span style="margin-left:12px">Balanced accuracy on the test set, %</span></div>
+  <p class="src">Same base model (ViT-B/16, ImageNet-21k), same splits and the same model selection (best validation balanced accuracy) for all three methods. The 1,000-image setting is the paper's VTAB-1k protocol.</p>
+  <aside class="notes">Each small chart is one task; each line is one method, from 1,000 training images on the left to the full training split on the right. Red is always above grey: VPT never loses to the linear probe, and on skin lesions the gap grows from 5 to 13 points with more data, because prompts can reshape the features and a linear head cannot. Against full fine-tuning (dashed) it is mixed: VPT ties or wins on blood cells and on X-rays with all the data, and trails by 2 to 4 points on skin lesions and on X-rays with 1,000 images. Note that, unlike the paper's claim, the low-data setting did not favour VPT here; medical images are far from ImageNet, the same pattern as the paper's own Specialized group.</aside>
+</section>
+
+<!-- ============================================================ 17c -->
+<section class="slide" id="s-results" data-title="All results">
+  <h2 id="results-title">All results, test set</h2>
+  <table class="tb" id="alltab" style="font-size:16.5px">
+    <thead>
+      <tr><th style="border-bottom:none"></th><th style="border-bottom:none"></th><th colspan="3" style="text-align:center;border-bottom:1px solid var(--rule)">1,000 training images</th><th colspan="3" style="text-align:center;border-bottom:1px solid var(--rule)">full training set</th><th style="border-bottom:none"></th></tr>
+      <tr><th>Task</th><th style="text-align:left">Method</th><th>acc.</th><th>bal. acc.</th><th>AUC</th><th>acc.</th><th>bal. acc.</th><th>AUC</th><th>stored per task</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+  <p class="src">DermaMNIST, BloodMNIST and PneumoniaMNIST from MedMNIST+ 224 × 224 (Yang et al. 2023). Balanced accuracy is the mean per-class recall: on DermaMNIST two thirds of the images are nevi, so always answering “nevus” scores 67% accuracy but 14% balanced accuracy. Code check on Oxford Flowers first: VPT-deep 99.1% (paper 99.0%).</p>
+  <aside class="notes">The full numbers behind the previous slide, for questions. The last column is the cost side: kilobytes, megabytes, or a whole model per task.</aside>
+</section>
+
+<!-- ============================================================ 18 -->
+<section class="slide" id="s-demo" data-title="Live: task swap">
+  <h2>Live: the same image through all three models</h2>
+  <div class="seg tasks" id="task" role="group" aria-label="Task">
+    <button type="button" data-t="dermamnist" aria-pressed="true">Skin lesion <span>dermoscopy</span></button><button type="button" data-t="bloodmnist" aria-pressed="false">Blood cell <span>microscopy</span></button><button type="button" data-t="pneumoniamnist" aria-pressed="false">Chest X-ray <span>radiograph</span></button>
+  </div>
+  <div class="demo">
+    <div>
+      <div class="drop" id="drop" tabindex="0" role="button" aria-label="Choose or drop an image">
+        <div class="hint">Pick a test image below,<br>or drop your own here</div>
+      </div>
+      <input type="file" id="file" accept="image/*" hidden>
+      <div class="truth" id="truth">&nbsp;</div>
+      <div class="thumbs" id="thumbs"></div>
+    </div>
+    <div>
+      <div class="basebox">
+        <div class="bt"><b>Base model:</b> ViT-B/16 pretrained on ImageNet-21k</div>
+        <div class="bs">Google's original Vision Transformer, 85.8M parameters, trained on 14M everyday photos and never on medical images. The same checkpoint the VPT paper uses.</div>
+      </div>
+      <div class="res3">
+        <div class="mcol" data-m="linear"><div class="rel frozen">base model frozen</div><h3>Linear probe</h3><div class="meta">+ a new head</div><div class="bars"></div><div class="mtime"></div></div>
+        <div class="mcol" data-m="vpt"><div class="rel frozen">base model frozen</div><h3 class="t">VPT-deep</h3><div class="meta">+ prompts and a head</div><div class="bars"></div><div class="mtime"></div></div>
+        <div class="mcol" data-m="full"><div class="rel own">base model retrained</div><h3>Full fine-tuning</h3><div class="meta">a whole new copy</div><div class="bars"></div><div class="mtime"></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="status" id="status"><i class="dot"></i><span class="st-text">Not connected</span><span class="grow"></span><span class="disc">Research demo, not a diagnostic tool</span><input id="endpoint" aria-label="Where the models run: browser, or a server URL" title="browser, or a Gradio server URL such as http://127.0.0.1:7860/" spellcheck="false"><button type="button" class="btn" id="connect">Load</button></div>
+  <aside class="notes">The blue box is the base model: Google's ViT-B/16, pretrained on everyday photos, never on medical images. Every click runs the image through three models on the server. The linear probe and VPT both use that base model frozen, the very same copy in memory; full fine-tuning retrained all of its weights, so it is a separate 343 MB model per task. Click through the three tasks; only small files change for linear and VPT. The thumbnails are random test images, not picked to look good, so a wrong answer can happen; say so. Research demo, not a diagnostic tool.</aside>
+</section>
+
+<!-- ============================================================ 18b -->
+<section class="slide" id="s-mixed" data-title="Live: one forward pass, three tasks">
+  <h2>Three tasks in a single forward pass</h2>
+  <div class="mixed" id="mixed"></div>
+  <div class="mixed-foot"><button type="button" class="btn primary" id="reshuffle">New images</button><span id="mixed-info">Each image in the batch carries its own task's prompts. Full fine-tuning would need three separate models for this.</span></div>
+  <div class="status" id="status2"><i class="dot"></i><span class="st-text">Not connected</span><span class="grow"></span><span class="disc">Research demo, not a diagnostic tool</span></div>
+  <aside class="notes">This is something only input-side methods can do. The batch holds a skin image, a blood smear and an X-ray, each with its own prompts, and they go through the same frozen layers together in one pass. With full fine-tuning you would need three 343 MB models and three passes. Press New images for another random draw.</aside>
+</section>
+
+<!-- ============================================================ 16 -->
+<section class="slide" id="s-questions" data-title="Reading critically">
+  <h2>Four things I would ask the authors</h2>
+  <div class="qs">
+    <div><h3>How much is the tuning budget?</h3><p>Per task, VPT searches 6 prompt lengths × 10 learning rates × 4 weight decays on val, 240 runs. Full gets 4 × 4 = 16.</p></div>
+    <div><h3>Why does it fail on MAE?</h3><p>The gap to Full is −23 points on MAE Natural. The paper says it is an open question. Is it the features, or the optimization?</p></div>
+    <div><h3>Is storage the right currency?</h3><p>Training memory and compute stay at Full's level, and inference gets slower. The win is per-task disk space and multi-task serving.</p></div>
+    <div><h3>What do the prompts encode?</h3><p>The prompts are never interpreted. Deep prompts act like extra keys and values at every layer (the paper's VPT-prefix), close to prefix-tuning in NLP.</p></div>
+  </div>
+  <aside class="notes">Good questions for discussion. The tuning budget point is fair but not fatal, because baselines were also grid-searched. The MAE result is the real open problem. And the prefix view is the bridge to LoRA: both change attention, one through extra tokens, the other through low-rank weight updates.</aside>
+</section>
+
+<!-- ============================================================ 19 -->
+<section class="slide" id="s-take" data-title="Takeaways">
+  <h2>What to remember</h2>
+  <div class="take">
+    <p>Learn a few tokens at the input of every layer and freeze the rest.<span class="sub">0.5–2% extra parameters per task, one shared backbone.</span></p>
+    <p>On supervised ViTs it beats full fine-tuning on 20 of 24 tasks.<span class="sub">Largest gains on low-data tasks that are far from ImageNet.</span></p>
+    <p>It saves storage, not compute, and it does not carry over to MAE.<span class="sub">This is the opening for methods that merge into the weights, such as LoRA.</span></p>
+    <p>On three medical tasks it always beat the linear probe and stayed within 4 points of full fine-tuning.<span class="sub">At 1.9 MB per task instead of 343 MB, on one shared base model.</span></p>
+  </div>
+  <aside class="notes">Three sentences. The third one sets up the rest of the session.</aside>
+</section>
+
+<!-- ============================================================ 20 -->
+<section class="slide" id="s-refs" data-title="References">
+  <h2>References</h2>
+  <ol class="refs">
+    <li>Jia, Tang, Chen, Cardie, Belongie, Hariharan, Lim. <i>Visual Prompt Tuning.</i> ECCV 2022. arXiv 2203.12119.</li>
+    <li>Dosovitskiy et al. <i>An Image is Worth 16×16 Words: Transformers for Image Recognition at Scale.</i> ICLR 2021.</li>
+    <li>Brown et al. <i>Language Models are Few-Shot Learners.</i> NeurIPS 2020.</li>
+    <li>Lester, Al-Rfou, Constant. <i>The Power of Scale for Parameter-Efficient Prompt Tuning.</i> EMNLP 2021.</li>
+    <li>Li, Liang. <i>Prefix-Tuning: Optimizing Continuous Prompts for Generation.</i> ACL 2021.</li>
+    <li>Houlsby et al. <i>Parameter-Efficient Transfer Learning for NLP.</i> ICML 2019.</li>
+    <li>Ben Zaken, Goldberg, Ravfogel. <i>BitFit: Simple Parameter-Efficient Fine-Tuning for Transformer-Based Masked Language-Models.</i> ACL 2022.</li>
+    <li>Zhai et al. <i>A Large-Scale Study of Representation Learning with the Visual Task Adaptation Benchmark.</i> arXiv 2019.</li>
+    <li>He et al. <i>Masked Autoencoders Are Scalable Vision Learners.</i> CVPR 2022.</li>
+    <li>Chen, Xie, He. <i>An Empirical Study of Training Self-Supervised Vision Transformers</i> (MoCo v3). ICCV 2021.</li>
+    <li>Hu et al. <i>LoRA: Low-Rank Adaptation of Large Language Models.</i> ICLR 2022.</li>
+    <li>Yang et al. <i>MedMNIST v2: A Large-Scale Lightweight Benchmark for 2D and 3D Biomedical Image Classification.</i> Scientific Data 2023.</li>
+    <li>Tschandl, Rosendahl, Kittler. <i>The HAM10000 Dataset, a Large Collection of Multi-Source Dermatoscopic Images of Common Pigmented Skin Lesions.</i> Scientific Data 2018.</li>
+  </ol>
+  <aside class="notes">Leave this up for questions.</aside>
+</section>
+
+</div>
+
+<script>
+(function(){
+'use strict';
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const fmt = n => Math.round(n).toLocaleString('en-US');
+const NS = 'http://www.w3.org/2000/svg';
+function el(tag, attrs = {}, text){ const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; return e; }
+const ASSETS = '2026-10-vpt/';
+
+/* ---------------- navigation ---------------- */
+const stage = $('#stage'), slides = $$('.slide');
+let cur = 0, step = 0;
+function fit(){ const s = Math.min(innerWidth / 1280, innerHeight / 720); stage.style.transform = `translate(${(innerWidth - 1280 * s) / 2}px,${(innerHeight - 720 * s) / 2}px) scale(${s})`; }
+addEventListener('resize', fit); fit();
+const hooks = {};   // per-slide step handlers: hooks[id](step)
+function steps(s){ return +(s.dataset.steps || 0) || Math.max(0, ...$$('[data-step]', s).map(e => +e.dataset.step)); }
+function applyStep(){ const s = slides[cur]; $$('[data-step]', s).forEach(e => e.classList.toggle('pre', +e.dataset.step > step)); hooks[s.id] && hooks[s.id](step); }
+function show(i, fromEnd){
+  cur = Math.max(0, Math.min(slides.length - 1, i));
+  slides.forEach((s, k) => s.classList.toggle('active', k === cur));
+  step = fromEnd ? steps(slides[cur]) : 0; applyStep();
+  history.replaceState(null, '', '#' + (cur + 1));
+  slides[cur].dispatchEvent(new Event('enter'));
+  syncNotes();
+}
+function next(){ if (step < steps(slides[cur])){ step++; applyStep(); syncNotes(); return; } if (cur < slides.length - 1) show(cur + 1); }
+function prev(){ if (step > 0){ step--; applyStep(); syncNotes(); return; } if (cur > 0) show(cur - 1, true); }
+addEventListener('keydown', e => {
+  if (e.target.closest && e.target.closest('input:not([type=range]),textarea')) return;
+  if (e.target.type === 'range' && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) return;
+  const k = e.key;
+  if (k === 'ArrowRight' || k === 'PageDown' || k === ' ' ){ e.preventDefault(); next(); }
+  else if (k === 'ArrowLeft' || k === 'PageUp'){ e.preventDefault(); prev(); }
+  else if (k === 'Home') show(0);
+  else if (k === 'End') show(slides.length - 1);
+  else if (k === 'f' || k === 'F'){ document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.(); }
+  else if (k === 'n' || k === 'N') openNotes();
+});
+
+/* presenter window: N opens notes, timer and the next slide's title in a separate window */
+let notesWin = null, t0 = null;
+function openNotes(){
+  notesWin = window.open('', 'vpt-notes', 'width=760,height=520');
+  if (!notesWin) return;
+  t0 = t0 || Date.now();
+  notesWin.document.title = 'Notes · Visual Prompt Tuning';
+  notesWin.document.body.style.cssText = 'margin:0;padding:28px 34px;font:20px/1.5 "Source Sans 3",Segoe UI,sans-serif;background:#1C1F23;color:#EDEBE6';
+  notesWin.document.body.innerHTML = '<div id="h" style="display:flex;justify-content:space-between;font-size:15px;color:#9AA0A6;margin-bottom:16px"><span id="pos"></span><span id="clock"></span></div><div id="title" style="font:600 26px Georgia,serif;margin-bottom:12px"></div><div id="body"></div><div id="next" style="margin-top:26px;font-size:15px;color:#9AA0A6"></div>';
+  notesWin.addEventListener('keydown', e => { if (['ArrowRight','ArrowLeft','PageDown','PageUp',' '].includes(e.key)){ e.preventDefault(); (e.key === 'ArrowLeft' || e.key === 'PageUp') ? prev() : next(); } });
+  syncNotes();
+}
+function syncNotes(){
+  if (!notesWin || notesWin.closed) return;
+  const d = notesWin.document, s = slides[cur], n = slides[cur + 1];
+  d.getElementById('pos').textContent = `${cur + 1} / ${slides.length}` + (steps(s) ? ` · step ${step} of ${steps(s)}` : '');
+  d.getElementById('title').textContent = s.dataset.title || '';
+  d.getElementById('body').textContent = ($('aside.notes', s) || {}).textContent || '';
+  d.getElementById('next').textContent = n ? 'Next: ' + n.dataset.title : 'Last slide';
+}
+setInterval(() => { if (notesWin && !notesWin.closed && t0){ const s = Math.floor((Date.now() - t0) / 1000); notesWin.document.getElementById('clock').textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; } }, 1000);
+
+/* ---------------- 1 · title figure: token sequence through four layers, deep prompts in red ---------------- */
+(function(){
+  const host = $('#title-fig'), W = 470, rows = 5, sz = 18, gap = 5, pitch = sz + gap;
+  const svg = el('svg', { width: W, height: rows * 40 + 10, viewBox: `0 0 ${W} ${rows * 40 + 10}` });
+  for (let r = 0; r < rows; r++){
+    const y = (rows - 1 - r) * 40 + 4;
+    let x = 0;
+    svg.append(el('rect', { x: x + 1, y: y + 1, width: sz - 2, height: sz - 2, rx: 3, fill: 'none', stroke: css('--ink'), 'stroke-width': 2 })); x += pitch + 6;
+    for (let k = 0; k < 4; k++){ svg.append(el('rect', { x, y, width: sz, height: sz, rx: 3, fill: css('--tuned') })); x += pitch; }
+    x += 6;
+    for (let k = 0; k < 13; k++){ svg.append(el('rect', { x, y, width: sz, height: sz, rx: 3, fill: css('--frozen-wash'), stroke: '#B9C8DA' })); x += pitch; }
+    if (r < rows - 1) svg.append(el('rect', { x: 0, y: y - 13, width: x - gap, height: 4, rx: 2, fill: css('--frozen'), opacity: .9 }));
+  }
+  host.append(svg);
+})();
+
+/* ---------------- 2 · storage squares ---------------- */
+(function(){
+  const c = $('#copies'); for (let i = 0; i < 24; i++) c.append(document.createElement('i'));
+  // 24 tasks' extras total 0.18 of one backbone (1.18x). Backbone square = 58x58 = 3364 px^2 -> extras = 605 px^2 over width 58 -> 10.4 px tall
+  const s = $('#slivers'), total = 0.18 * 58 * 58 / 58, h = total / 24;
+  for (let i = 0; i < 24; i++){ const d = document.createElement('div'); d.style.cssText = `height:${h.toFixed(2)}px;background:${i % 2 ? '#D25A45' : css('--tuned')}`; s.append(d); }
+})();
+
+/* ---------------- 3 · tuning protocols ---------------- */
+(function(){
+  const P = [
+    { n: 'Full', g: '', acc: 73.9, head: 1, layers: 'all' },
+    { n: 'Linear', g: 'head-oriented', acc: 63.1, head: 1, layers: '' },
+    { n: 'Partial-1', g: '', acc: 66.2, head: 1, layers: 'last' },
+    { n: 'Mlp-3', g: '', acc: 62.8, head: 3, layers: '' },
+    { n: 'Sidetune', g: 'backbone-oriented', acc: 57.0, head: 1, layers: 'side' },
+    { n: 'Bias', g: '', acc: 71.0, head: 1, layers: 'bias' },
+    { n: 'Adapter', g: '', acc: 66.7, head: 1, layers: 'adapter' },
+  ];
+  const host = $('#protos');
+  for (const p of P){
+    const d = document.createElement('div'); d.className = 'proto';
+    let st = '<div class="stack" style="position:relative">';
+    st += `<div class="hd" style="height:${p.head === 3 ? 34 : 14}px;background:var(--tuned)"></div>`;
+    for (let i = 11; i >= 0; i--){
+      const tu = p.layers === 'all' || (p.layers === 'last' && i === 11);
+      st += `<div class="ly${tu ? ' tu' : ''}">${p.layers === 'bias' ? '<i class="bias"></i>' : ''}${p.layers === 'adapter' ? '<i class="ad"></i>' : ''}</div>`;
+    }
+    if (p.layers === 'side') st += '<i class="side"></i>';
+    st += '</div>';
+    d.innerHTML = `<div class="grpn">${p.g}</div>${st}<div class="name">${p.n}</div><div class="acc num${p.n === 'Full' ? '' : ' dim'}">${p.acc.toFixed(1)}</div>`;
+    host.append(d);
+  }
+})();
+
+/* ---------------- 5 · ViT recap ---------------- */
+(function(){
+  $('#vitimg').style.backgroundImage = `url(${ASSETS}dermamnist-4-0.png)`;
+  const r = $('#vittok');
+  r.innerHTML = '<i class="tok cls"></i>' + '<i class="tok e"></i>'.repeat(7) + '<span class="ell">…</span>' + '<i class="tok e"></i>'.repeat(2);
+})();
+
+/* ---------------- 6 · VPT shallow / deep figure ---------------- */
+(function(){
+  const host = $('#vptfig'), sz = 21, gp = 5, pitch = sz + gp, nP = 4, nE = 11;
+  const LAYERS = [1, 2, 3, null, 12];                 // null = the elided middle layers
+  const rowH = 66, W = 560, top = 58, H = top + LAYERS.length * rowH + 34;
+  function sub(parent, base, idx, attrs){
+    const t = el('text', attrs, base);
+    if (idx !== '') t.append(el('tspan', { dy: 5, style: 'font-size:11px;font-style:normal' }, idx));
+    parent.append(t); return t;
+  }
+  function draw(deep){
+    host.innerHTML = '';
+    const svg = el('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}` });
+    const x0 = 64, xP = x0 + pitch + 10, xE = xP + nP * pitch + 10, xEnd = xE + nE * pitch;
+    const ital = c => `font-family:var(--serif);font-style:italic;font-size:16px;fill:${c}`;
+    svg.append(el('rect', { x: x0 - 8, y: 4, width: 70, height: 30, rx: 3, fill: css('--tuned') }));
+    svg.append(el('text', { x: x0 + 27, y: 24, 'text-anchor': 'middle', style: 'fill:#fff;font-size:14px;font-weight:600' }, 'Head'));
+    svg.append(el('line', { x1: x0 + sz / 2, x2: x0 + sz / 2, y1: 34, y2: top - 4, stroke: css('--ink-3'), 'stroke-width': 1.5 }));
+    LAYERS.forEach((li, idx) => {
+      const r = LAYERS.length - 1 - idx;            // drawn top-down, layer 12 first
+      const layer = LAYERS[r], y = top + idx * rowH;
+      if (layer === null){
+        svg.append(el('text', { x: xE + nE * pitch / 2, y: y + 30, 'text-anchor': 'middle', style: `fill:${css('--ink-3')};font-size:22px` }, '⋮'));
+        return;
+      }
+      svg.append(el('rect', { x: x0 - 8, y, width: xEnd - x0 + 8, height: 15, rx: 2, fill: css('--frozen') }));
+      sub(svg, 'L', String(layer), { x: xEnd + 12, y: y + 12, style: ital(css('--frozen')) });
+      const ty = y + 24, learned = deep || layer === 1;
+      svg.append(el('rect', { x: x0 + 1, y: ty + 1, width: sz - 2, height: sz - 2, rx: 3, fill: css('--paper'), stroke: css('--ink'), 'stroke-width': 2 }));
+      for (let k = 0; k < nP; k++) svg.append(el('rect', { x: xP + k * pitch, y: ty, width: sz, height: sz, rx: 3, fill: learned ? css('--tuned') : css('--tuned-wash'), stroke: learned ? 'none' : '#E3B6A9' }));
+      for (let k = 0; k < nE; k++) svg.append(el('rect', { x: xE + k * pitch, y: ty, width: sz, height: sz, rx: 3, fill: css('--frozen-wash'), stroke: '#B9C8DA' }));
+      // left-hand label: what occupies the prompt slots going into this layer
+      const lab = learned ? ['P', deep ? String(layer - 1) : ''] : ['Z', String(layer - 1)];
+      sub(svg, lab[0], lab[1], { x: x0 - 22, y: ty + 16, 'text-anchor': 'end', style: ital(learned ? css('--tuned') : css('--ink-3')) });
+      if (layer === 1){
+        sub(svg, 'x', '0', { x: x0 + 5, y: ty + sz + 20, style: ital(css('--ink-3')) });
+        sub(svg, 'E', '0', { x: xE + nE * pitch / 2 - 8, y: ty + sz + 20, style: ital(css('--ink-3')) });
+        svg.append(el('text', { x: xP + nP * pitch / 2, y: ty + sz + 20, 'text-anchor': 'middle', style: `fill:${css('--tuned')};font-size:13px` }, `p = ${nP} shown`));
+      }
+    });
+    host.append(svg);
+  }
+  const EQ = [
+    `[<span class="m">x</span><sub>1</sub>, <span class="m">Z</span><sub>1</sub>, <span class="m">E</span><sub>1</sub>] = <span class="m f">L</span><sub class="f">1</sub>([<span class="m">x</span><sub>0</sub>, <span class="m t">P</span>, <span class="m">E</span><sub>0</sub>])<br>
+     [<span class="m">x</span><sub>i</sub>, <span class="m">Z</span><sub>i</sub>, <span class="m">E</span><sub>i</sub>] = <span class="m f">L</span><sub class="f">i</sub>([<span class="m">x</span><sub>i−1</sub>, <span class="m">Z</span><sub>i−1</sub>, <span class="m">E</span><sub>i−1</sub>])<span class="lbl">i = 2 … N</span><br>
+     <span class="m">y</span> = <span class="t">Head</span>(<span class="m">x</span><sub>N</sub>)`,
+    `[<span class="m">x</span><sub>i</sub>, <span style="display:inline-block;width:22px;border-bottom:1.5px solid var(--ink-3);height:14px"></span>, <span class="m">E</span><sub>i</sub>] = <span class="m f">L</span><sub class="f">i</sub>([<span class="m">x</span><sub>i−1</sub>, <span class="m t">P</span><sub class="t">i−1</sub>, <span class="m">E</span><sub>i−1</sub>])<span class="lbl">i = 1 … N</span><br>
+     <span class="m">y</span> = <span class="t">Head</span>(<span class="m">x</span><sub>N</sub>)`
+  ];
+  const NOTE = [
+    'One set of <span class="m">p</span> prompts, <span class="m t">P</span> ∈ ℝ<sup>p×d</sup>, enters before the first layer. Their outputs <span class="m">Z</span> travel up like any other token. Stored: <span class="m">p·d</span> numbers.',
+    'Each layer gets its own prompts <span class="m t">P</span><sub class="t">i−1</sub>. The previous layer\'s outputs at those positions are discarded. Stored: <span class="m">N·p·d</span> numbers.'
+  ];
+  let v = 0;
+  function set(x){ v = x; draw(!!v); $('#vpteq').innerHTML = EQ[v]; $('#vptnote').innerHTML = NOTE[v]; $$('#vptseg button').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.v === v))); }
+  $('#vptseg').addEventListener('click', e => { const b = e.target.closest('button'); if (b){ set(+b.dataset.v); step = +b.dataset.v; } });
+  hooks['s-method'] = s => set(s);
+  set(0);
+})();
+
+/* ---------------- 7 · parameter calculator ---------------- */
+(function(){
+  const BB = { B: { d: 768, N: 12, m: 196, params: 85.8e6, name: 'ViT-B/16' }, L: { d: 1024, N: 24, m: 196, params: 303.3e6, name: 'ViT-L/16' }, H: { d: 1280, N: 32, m: 256, params: 630.8e6, name: 'ViT-H/14' } };
+  const PS = [1, 5, 10, 50, 100, 200, 300, 400];
+  let bb = 'B', deep = true;
+  const p = $('#c-p'), c = $('#c-c'), t = $('#c-t');
+  const mb = n => n * 4 / 1e6;      // fp32 bytes -> MB
+  const big = n => n >= 1e9 ? (n / 1e9).toFixed(2) + 'B' : n >= 1e6 ? (n / 1e6).toFixed(n >= 1e8 ? 0 : 1) + 'M' : fmt(n);
+  function size(m){ return m >= 1000 ? (m / 1000).toFixed(1) + ' GB' : m >= 10 ? m.toFixed(0) + ' MB' : m.toFixed(2) + ' MB'; }
+  function upd(){
+    const b = BB[bb], P = PS[+p.value], C = +c.value, T = +t.value;
+    const prompts = (deep ? b.N : 1) * P * b.d, head = b.d * C + C, tr = prompts + head;
+    const n0 = 1 + b.m, n = n0 + P;
+    const flops = k => 12 * k * b.d * b.d + 2 * k * k * b.d;
+    const ratio = flops(n) / flops(n0);
+    $('#o-p').textContent = P; $('#o-c').textContent = C; $('#o-t').textContent = T;
+    const fullStore = T * (b.params + head), vptStore = b.params + T * tr;
+    $('#readout').innerHTML = `
+      <div>Input sequence<span class="formula">1 + p + m</span></div><div class="v">${n}<span class="x">tokens</span></div>
+      <div>Prompt parameters<span class="formula">${deep ? 'N · p · d = ' + b.N + ' · ' + P + ' · ' + b.d : 'p · d = ' + P + ' · ' + b.d}</span></div><div class="v hlv">${fmt(prompts)}</div>
+      <div>Head<span class="formula">d · C + C</span></div><div class="v">${fmt(head)}</div>
+      <div>Trainable, share of backbone</div><div class="v hlv">${(100 * tr / b.params).toFixed(2)}%<span class="x">of ${big(b.params)}</span></div>
+      <div>Stored per task, fp32</div><div class="v">${size(mb(tr))}<span class="x">vs ${size(mb(b.params))}</span></div>
+      <div>Storage for ${T} task${T > 1 ? 's' : ''}<span class="formula">full fine-tuning → VPT</span></div><div class="v">${size(mb(fullStore))} → <span class="t">${size(mb(vptStore))}</span><span class="x">${(fullStore / vptStore).toFixed(1)}× less</span></div>
+      <div>Forward compute vs plain ViT</div><div class="v">${ratio.toFixed(2)}×</div>`;
+  }
+  $('#c-bb').addEventListener('click', e => { const x = e.target.closest('button'); if (!x) return; bb = x.dataset.b; $$('#c-bb button').forEach(y => y.setAttribute('aria-pressed', String(y === x))); upd(); });
+  $('#c-var').addEventListener('click', e => { const x = e.target.closest('button'); if (!x) return; deep = x.dataset.v === 'deep'; $$('#c-var button').forEach(y => y.setAttribute('aria-pressed', String(y === x))); upd(); });
+  [p, c, t].forEach(i => i.addEventListener('input', upd));
+  upd();
+})();
+
+/* ---------------- 9 · Table 1 ---------------- */
+(function(){
+  const R = [
+    ['Full', 24.02, [88.54], [75.88], [83.36], [47.64], 'ref'],
+    ['grp', 'Head-oriented'],
+    ['Linear', 1.02, [79.32, 0], [68.93, 1], [77.16, 1], [26.84, 0]],
+    ['Partial-1', 3.00, [82.63, 0], [69.44, 2], [78.53, 0], [34.17, 0]],
+    ['Mlp-3', 1.35, [79.80, 0], [67.80, 2], [72.83, 0], [30.62, 0]],
+    ['grp', 'Backbone-oriented'],
+    ['Sidetune', 3.69, [78.35, 0], [58.21, 0], [68.12, 0], [23.41, 0]],
+    ['Bias', 1.05, [88.41, 3], [73.30, 3], [78.25, 0], [44.09, 2]],
+    ['Adapter', 1.23, [85.66, 2], [70.39, 4], [77.11, 0], [33.43, 0]],
+    ['grp', 'Visual Prompt Tuning'],
+    ['VPT-shallow', 1.04, [84.62, 1], [76.81, 4], [79.66, 0], [46.98, 4]],
+    ['VPT-deep', 1.18, [89.11, 4], [78.48, 6], [82.43, 2], [54.98, 8], 'hl'],
+  ];
+  const tb = $('#t1 tbody');
+  for (const r of R){
+    const tr = document.createElement('tr');
+    if (r[0] === 'grp'){ tr.className = 'grp'; tr.innerHTML = `<td colspan="6">${r[1]}</td>`; tb.append(tr); continue; }
+    if (r[6]) tr.className = r[6];
+    const cell = ([v, w]) => `<td>${v.toFixed(2)}${w != null ? `<span class="w">(${w})</span>` : ''}</td>`;
+    tr.innerHTML = `<td>${r[0]}</td><td style="text-align:left;padding-left:30px"><span class="bar" style="width:${(r[1] / 24.02 * 200).toFixed(1)}px"></span>${r[1].toFixed(2)}×</td>` + r.slice(2, 6).map(cell).join('');
+    tb.append(tr);
+  }
+})();
+
+/* ---------------- 10 · accuracy vs storage scatter ---------------- */
+(function(){
+  const D = [
+    ['Full', 24.02, 73.86, 'r'], ['Linear', 1.02, 63.06, 'r'], ['Partial-1', 3.00, 66.19, 'r'], ['Mlp-3', 1.35, 62.76, 'r'],
+    ['Sidetune', 3.69, 57.02, 'r'], ['Bias', 1.05, 71.01, 'r'], ['Adapter', 1.23, 66.65, 'r'], ['VPT-shallow', 1.04, 72.02, 'r'], ['VPT-deep', 1.18, 76.25, 'r'],
+  ];
+  const W = 1110, H = 470, m = { l: 64, r: 30, t: 16, b: 54 };
+  const xs = v => m.l + (Math.log10(v) - Math.log10(0.82)) / (Math.log10(32) - Math.log10(0.82)) * (W - m.l - m.r);
+  const ys = v => m.t + (78 - v) / (78 - 55) * (H - m.t - m.b);
+  const svg = el('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}` });
+  const g = el('g', { class: 'grid' }), ax = el('g', { class: 'axis' });
+  for (let y = 56; y <= 78; y += 4){ g.append(el('line', { x1: m.l, x2: W - m.r, y1: ys(y), y2: ys(y) })); svg.append(el('text', { x: m.l - 10, y: ys(y) + 4, 'text-anchor': 'end' }, y)); }
+  for (const x of [1, 2, 4, 8, 16, 24]) svg.append(el('text', { x: xs(x), y: H - m.b + 22, 'text-anchor': 'middle' }, x + '×'));
+  ax.append(el('line', { x1: m.l, x2: W - m.r, y1: H - m.b, y2: H - m.b }));
+  svg.append(g, ax);
+  svg.append(el('text', { x: m.l + (W - m.l - m.r) / 2, y: H - 8, 'text-anchor': 'middle' }, 'Total parameters stored for 24 tasks, relative to one backbone'));
+  svg.append(el('text', { x: m.l - 52, y: m.t - 2, 'text-anchor': 'start' }, 'mean accuracy %'));
+  // reference line at Full's accuracy
+  svg.append(el('line', { x1: m.l, x2: W - m.r, y1: ys(73.86), y2: ys(73.86), stroke: css('--ink-3'), 'stroke-dasharray': '4 5' }));
+  const OFF = { 'Linear': [0, 24, 'middle'], 'Mlp-3': [12, 5], 'Adapter': [12, 5], 'Bias': [12, 16], 'VPT-shallow': [13, -6], 'VPT-deep': [14, 6], 'Full': [-14, -12, 'end'], 'Partial-1': [12, 5], 'Sidetune': [12, 5] };
+  for (const [n, x, y] of D){
+    const vpt = n.startsWith('VPT'), full = n === 'Full';
+    svg.append(el('circle', { cx: xs(x), cy: ys(y), r: vpt ? 7 : 5.5, fill: vpt ? css('--tuned') : full ? css('--ink') : css('--ink-3') }));
+    const [dx, dy, anc] = OFF[n];
+    svg.append(el('text', { x: xs(x) + dx, y: ys(y) + dy, 'text-anchor': anc || 'start', class: 'lab' + (n === 'VPT-deep' ? ' t' : vpt || full ? '' : ' dim') }, `${n}  ${y.toFixed(1)}`));
+  }
+  $('#scatter').append(svg);
+})();
+
+/* ---------------- 11 · prompt location dot plot (Fig. 5) ---------------- */
+(function(){
+  const rows = ['Prepend · deep', 'Add · deep', 'Prepend · shallow', 'Add · shallow', 'Prepend-pixel · shallow', 'Concat-channel · shallow', 'Linear probe'];
+  const G = [
+    { n: 'Natural (7)', full: 75.9, v: [78.5, 77.5, 76.8, 74.0, 71.5, 47.2, 68.9], lo: 40, hi: 85 },
+    { n: 'Specialized (4)', full: 83.4, v: [82.4, 80.2, 79.7, 78.0, 78.4, 65.7, 77.2], lo: 60, hi: 90 },
+    { n: 'Structured (8)', full: 47.6, v: [55.0, 43.2, 47.0, 38.6, 44.5, 33.0, 26.8], lo: 20, hi: 60 },
+  ];
+  const W = 1110, H = 450, lw = 230, pw = (W - lw) / 3, rh = 52, top = 44;
+  const svg = el('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}` });
+  rows.forEach((r, i) => {
+    const y = top + i * rh + rh / 2;
+    svg.append(el('text', { x: 0, y: y + 5, class: 'lab' + (i === 0 ? ' t' : i === 6 ? ' dim' : ''), style: 'font-size:16px' }, r));
+    svg.append(el('line', { x1: lw - 10, x2: W, y1: y, y2: y, stroke: css('--rule') }));
+  });
+  G.forEach((g, gi) => {
+    const x0 = lw + gi * pw + 26, x1 = lw + (gi + 1) * pw - 26, xs = v => x0 + (v - g.lo) / (g.hi - g.lo) * (x1 - x0);
+    svg.append(el('text', { x: (x0 + x1) / 2, y: 16, 'text-anchor': 'middle', style: `fill:${css('--ink')};font-weight:600;font-size:15px` }, g.n));
+    const yb = top + rows.length * rh + 6;
+    svg.append(el('line', { x1: xs(g.full), x2: xs(g.full), y1: top - 4, y2: yb, stroke: css('--ink'), 'stroke-dasharray': '3 4' }));
+    svg.append(el('text', { x: xs(g.full) + 5, y: top - 8, style: `fill:${css('--ink')};font-size:12.5px` }, `Full ${g.full}`));
+    for (let t = g.lo; t <= g.hi; t += (g.hi - g.lo) / 5 > 8 ? 10 : 5){ svg.append(el('text', { x: xs(t), y: yb + 18, 'text-anchor': 'middle', style: 'font-size:12px' }, t)); }
+    g.v.forEach((v, i) => {
+      const y = top + i * rh + rh / 2;
+      svg.append(el('circle', { cx: xs(v), cy: y, r: i === 0 ? 7 : 5.5, fill: i === 0 ? css('--tuned') : i === 6 ? css('--ink-3') : (i < 2 ? '#D9806F' : css('--ink-2')) }));
+      svg.append(el('text', { x: xs(v), y: y - 11, 'text-anchor': 'middle', style: `font-size:13px;fill:${i === 0 ? css('--tuned') : css('--ink-2')};${i === 0 ? 'font-weight:600' : ''}` }, v.toFixed(1)));
+    });
+  });
+  $('#whereplot').append(svg);
+})();
+
+/* ---------------- 14 · self-supervised dot plot ---------------- */
+(function(){
+  const B = [
+    { n: 'Supervised, ImageNet-21k', v: { Full: 68.96, 'VPT-deep': 71.96, 'VPT-shallow': 67.82, 'Partial-1': 60.71, Bias: 65.21, Adapter: 60.31, Linear: 57.64 } },
+    { n: 'MoCo v3', v: { Full: 69.55, 'VPT-deep': 65.23, 'VPT-shallow': 62.38, 'Partial-1': 68.26, Bias: 69.15, Adapter: 68.18, Linear: 59.62 } },
+    { n: 'MAE', v: { Full: 64.26, 'VPT-deep': 41.07, 'VPT-shallow': 45.70, 'Partial-1': 61.45, Bias: 59.31, Adapter: 56.36, Linear: 32.10 } },
+  ];
+  const W = 1110, H = 430, lw = 230, x0 = lw + 20, x1 = W - 30, lo = 30, hi = 75, rh = 118, top = 40;
+  const xs = v => x0 + (v - lo) / (hi - lo) * (x1 - x0);
+  const svg = el('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}` });
+  for (let t = lo; t <= hi; t += 5){ svg.append(el('line', { x1: xs(t), x2: xs(t), y1: top - 10, y2: top + B.length * rh - 30, stroke: css('--rule') })); svg.append(el('text', { x: xs(t), y: top + B.length * rh - 10, 'text-anchor': 'middle' }, t)); }
+  svg.append(el('text', { x: (x0 + x1) / 2, y: top + B.length * rh + 14, 'text-anchor': 'middle' }, 'mean VTAB-1k accuracy %'));
+  B.forEach((b, i) => {
+    const y = top + i * rh + 24;
+    svg.append(el('text', { x: 0, y: y + 5, style: `fill:${css('--ink')};font-size:16px;font-weight:600` }, b.n));
+    svg.append(el('line', { x1: x0, x2: x1, y1: y, y2: y, stroke: css('--ink-3') }));
+    const others = ['Linear', 'Partial-1', 'Bias', 'Adapter', 'VPT-shallow'];
+    for (const k of others) svg.append(el('circle', { cx: xs(b.v[k]), cy: y, r: 4.5, fill: '#B3B7BB' }));
+    svg.append(el('circle', { cx: xs(b.v.Full), cy: y, r: 7, fill: css('--paper'), stroke: css('--ink'), 'stroke-width': 2.5 }));
+    svg.append(el('circle', { cx: xs(b.v['VPT-deep']), cy: y, r: 7, fill: css('--tuned') }));
+    const fullAbove = b.v.Full >= b.v['VPT-deep'];
+    svg.append(el('text', { x: xs(b.v.Full), y: y - 16, 'text-anchor': 'middle', style: `fill:${css('--ink')};font-size:13.5px` }, `Full ${b.v.Full.toFixed(1)}`));
+    svg.append(el('text', { x: xs(b.v['VPT-deep']), y: y + 26, 'text-anchor': 'middle', style: `fill:${css('--tuned')};font-size:13.5px;font-weight:600` }, `VPT-deep ${b.v['VPT-deep'].toFixed(1)}`));
+    if (i === 0) svg.append(el('text', { x: xs(b.v.Linear), y: y + 26, 'text-anchor': 'middle', style: `fill:${css('--ink-3')};font-size:12.5px` }, 'Linear'));
+    if (i === 2){ svg.append(el('text', { x: xs(b.v.Linear), y: y + 26, 'text-anchor': 'middle', style: `fill:${css('--ink-3')};font-size:12.5px` }, 'Linear')); svg.append(el('text', { x: xs(b.v['Partial-1']), y: y + 26, 'text-anchor': 'middle', style: `fill:${css('--ink-3')};font-size:12.5px` }, 'Partial-1')); }
+  });
+  const ky = H - 4;
+  $('#sslplot').append(svg);
+})();
+
+/* ---------------- 17, 18 · measured results (written by demo/vpt/fill_deck.py from demo/vpt/weights/*.json) ---------------- */
+const RESULTS = {"runs": {"dermamnist_full": {"linear": {"test": {"acc": 83.04, "bal_acc": 68.08, "auc": 96.44}, "trainable": 5383, "trainable_pct": 0.006, "train_images": 7007, "train_minutes": 4.8, "epochs": 30, "base_lr": 10.0, "file_kb": 21.2}, "vpt": {"test": {"acc": 88.28, "bal_acc": 81.03, "auc": 98.28}, "trainable": 466183, "trainable_pct": 0.543, "train_images": 7007, "train_minutes": 13.7, "epochs": 30, "base_lr": 2.5, "file_kb": 1821.2}, "full": {"test": {"acc": 91.22, "bal_acc": 84.37, "auc": 98.68}, "trainable": 85804039, "trainable_pct": 100.006, "train_images": 7007, "train_minutes": 20.4, "epochs": 30, "base_lr": 0.001, "file_kb": 335186.3}}, "dermamnist_1k": {"linear": {"test": {"acc": 75.11, "bal_acc": 58.35, "auc": 92.79}, "trainable": 5383, "trainable_pct": 0.006, "train_images": 1000, "train_minutes": 3.1, "epochs": 100, "base_lr": 10.0, "file_kb": 21.2}, "vpt": {"test": {"acc": 79.4, "bal_acc": 63.29, "auc": 92.72}, "trainable": 466183, "trainable_pct": 0.543, "train_images": 1000, "train_minutes": 7.8, "epochs": 100, "base_lr": 2.5, "file_kb": 1821.2}, "full": {"test": {"acc": 78.75, "bal_acc": 64.88, "auc": 93.88}, "trainable": 85804039, "trainable_pct": 100.006, "train_images": 1000, "train_minutes": 10.2, "epochs": 100, "base_lr": 0.001, "file_kb": 335186.3}}, "bloodmnist_full": {"linear": {"test": {"acc": 97.4, "bal_acc": 97.35, "auc": 99.9}, "trainable": 6152, "trainable_pct": 0.007, "train_images": 11959, "train_minutes": 7.0, "epochs": 20, "base_lr": 10.0, "file_kb": 24.2}, "vpt": {"test": {"acc": 99.06, "bal_acc": 99.14, "auc": 99.98}, "trainable": 466952, "trainable_pct": 0.544, "train_images": 11959, "train_minutes": 19.8, "epochs": 20, "base_lr": 2.5, "file_kb": 1824.2}, "full": {"test": {"acc": 99.09, "bal_acc": 99.24, "auc": 99.96}, "trainable": 85804808, "trainable_pct": 100.007, "train_images": 11959, "train_minutes": 17.7, "epochs": 15, "base_lr": 0.001, "file_kb": 335189.4}}, "bloodmnist_1k": {"linear": {"test": {"acc": 95.97, "bal_acc": 96.09, "auc": 99.83}, "trainable": 6152, "trainable_pct": 0.007, "train_images": 1000, "train_minutes": 2.6, "epochs": 60, "base_lr": 10.0, "file_kb": 24.2}, "vpt": {"test": {"acc": 98.07, "bal_acc": 98.18, "auc": 99.93}, "trainable": 466952, "trainable_pct": 0.544, "train_images": 1000, "train_minutes": 4.9, "epochs": 60, "base_lr": 2.5, "file_kb": 1824.2}, "full": {"test": {"acc": 97.63, "bal_acc": 97.97, "auc": 99.91}, "trainable": 85804808, "trainable_pct": 100.007, "train_images": 1000, "train_minutes": 7.4, "epochs": 60, "base_lr": 0.001, "file_kb": 335189.4}}, "pneumoniamnist_full": {"linear": {"test": {"acc": 92.79, "bal_acc": 90.9, "auc": 98.19}, "trainable": 1538, "trainable_pct": 0.002, "train_images": 4708, "train_minutes": 2.8, "epochs": 20, "base_lr": 2.5, "file_kb": 6.1}, "vpt": {"test": {"acc": 95.35, "bal_acc": 94.06, "auc": 99.34}, "trainable": 462338, "trainable_pct": 0.539, "train_images": 4708, "train_minutes": 6.2, "epochs": 20, "base_lr": 2.5, "file_kb": 1806.2}, "full": {"test": {"acc": 94.87, "bal_acc": 93.25, "auc": 99.37}, "trainable": 85800194, "trainable_pct": 100.002, "train_images": 4708, "train_minutes": 9.3, "epochs": 20, "base_lr": 0.001, "file_kb": 335171.3}}, "pneumoniamnist_1k": {"linear": {"test": {"acc": 91.35, "bal_acc": 89.15, "auc": 97.76}, "trainable": 1538, "trainable_pct": 0.002, "train_images": 1000, "train_minutes": 2.0, "epochs": 60, "base_lr": 2.5, "file_kb": 6.1}, "vpt": {"test": {"acc": 91.83, "bal_acc": 89.7, "auc": 98.47}, "trainable": 462338, "trainable_pct": 0.539, "train_images": 1000, "train_minutes": 4.0, "epochs": 60, "base_lr": 2.5, "file_kb": 1806.2}, "full": {"test": {"acc": 94.39, "bal_acc": 93.38, "auc": 99.18}, "trainable": 85800194, "trainable_pct": 100.002, "train_images": 1000, "train_minutes": 6.3, "epochs": 60, "base_lr": 0.001, "file_kb": 335171.3}}}, "bench": {"gpu": "NVIDIA GeForce RTX 5070 Ti Laptop GPU", "train_batch": 32, "cpu_threads": 2, "linear": {"train_ms_per_img": 1.29, "train_peak_gb": 0.48, "cpu_ms_per_img": 185}, "vpt": {"train_ms_per_img": 4.16, "train_peak_gb": 2.28, "cpu_ms_per_img": 227}, "full": {"train_ms_per_img": 5.01, "train_peak_gb": 3.49, "cpu_ms_per_img": 190}}};
+(function(){
+  const R = RESULTS || { runs: {} };
+  const M = ['linear', 'vpt', 'full'];
+  const NAME = { linear: 'Linear probe', vpt: 'VPT-deep', full: 'Full fine-tuning' };
+  // decimal units throughout, so the backbone is 343 MB (85.8M fp32 weights)
+  const mb = kb => { if (kb == null) return '–'; const B = kb * 1024; return B < 1e6 ? `${Math.round(B / 1e3)} KB` : `${(B / 1e6).toFixed(B < 1e7 ? 1 : 0)} MB`; };
+  const na = v => v == null ? '–' : v;
+
+  /* schematic stacks above the comparison table: what each method trains */
+  $$('#s-three .mini').forEach(el => {
+    const k = el.dataset.kind;
+    el.innerHTML = '<i class="hd"></i>' + Array.from({ length: 12 }, () => `<i class="${k === 'full' ? 'tu' : k === 'vpt' ? 'pr' : ''}"></i>`).join('');
+  });
+
+  /* 17 · cost table, DermaMNIST trained on all images */
+  const d = R.runs.dermamnist_full || {}, b = R.bench || {};
+  const v = (m, f) => d[m] ? f(d[m]) : '–';
+  const bv = (m, f) => b[m] ? f(b[m]) : '–';
+  const backboneKB = 85798656 * 4 / 1024;   // in KiB, converted by mb()
+  const rows = [
+    ['What is trained', () => 'the head', () => '12 × 50 prompt tokens + head', () => 'every weight + head'],
+    ['Trainable parameters', m => v(m, r => fmt(r.trainable) + `<span class="x">${r.trainable_pct < 1 ? r.trainable_pct.toFixed(2) : r.trainable_pct.toFixed(0)}% of the backbone</span>`)],
+    ['Stored per task', m => v(m, r => mb(r.file_kb) + (m === 'full' ? '<span class="x">a whole copy of the model</span>' : '<span class="x">on top of one shared backbone</span>'))],
+    ['Stored for all three tasks', m => m === 'full' ? `${mb(3 * backboneKB)}<span class="x">three separate models</span>` : `${mb(backboneKB + 3 * (d[m] ? d[m].file_kb : 0))}<span class="x">one backbone + 3 small files</span>`],
+    ['Training, 7,007 images, 30 epochs', m => v(m, r => `${r.train_minutes.toFixed(0)} min`)],
+    ['Training memory, batch 32', m => bv(m, r => `${r.train_peak_gb.toFixed(1)} GB<span class="x">${r.train_ms_per_img.toFixed(1)} ms per image</span>`)],
+    ['Inference per image, CPU', m => bv(m, r => `${r.cpu_ms_per_img} ms`) + `<span class="x">${m === 'vpt' ? 247 : 197} tokens</span>`],
+    ['Balanced accuracy, test', m => v(m, r => `${r.test.bal_acc.toFixed(1)}%`)],
+  ];
+  const tb = $('#cmp tbody');
+  for (const [label, ...fs] of rows){
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${label}</td>` + M.map((m, i) => `<td class="${m === 'vpt' ? 'vp' : ''}">${(fs[i] || fs[0])(m)}</td>`).join('');
+    tb.append(tr);
+  }
+
+  /* 17b · three slope charts: balanced accuracy at 1,000 images vs the full training set */
+  const TASKROWS = [['dermamnist', 'Skin lesion', 'dermoscopy · 7 classes'], ['bloodmnist', 'Blood cell', 'microscopy · 8 classes'], ['pneumoniamnist', 'Chest X-ray', 'radiograph · 2 classes']];
+  const COL = { linear: '#9EA3A8', vpt: css('--tuned'), full: css('--ink') };
+  for (const [task, title, sub] of TASKROWS){
+    const k1 = R.runs[task + '_1k'] || {}, kf = R.runs[task + '_full'] || {};
+    const nFull = Object.values(kf)[0]?.train_images;
+    const box = document.createElement('div');
+    box.innerHTML = `<div class="st">${title}</div><div class="ss">${sub}</div>`;
+    const W = 340, H = 330, l = 34, r = 112, t = 18, b = 40, X0 = l + 48, X1 = W - r;
+    const vals = M.flatMap(m => [k1[m], kf[m]].filter(Boolean).map(x => x.test.bal_acc));
+    const lo = vals.length ? Math.max(0, Math.floor((Math.min(...vals) - 3) / 5) * 5) : 50;
+    const hi = vals.length ? Math.min(100, Math.ceil((Math.max(...vals) + 2) / 5) * 5) : 100;
+    const step = hi - lo > 30 ? 10 : 5;
+    const ys = q => t + (hi - q) / (hi - lo) * (H - t - b);
+    const svg = el('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}` });
+    for (let q = lo; q <= hi; q += step){ svg.append(el('line', { x1: l, x2: X1 + 6, y1: ys(q), y2: ys(q), stroke: css('--rule') })); svg.append(el('text', { x: l - 6, y: ys(q) + 4, 'text-anchor': 'end' }, q)); }
+    svg.append(el('text', { x: X0, y: H - 16, 'text-anchor': 'middle', style: `fill:${css('--ink')};font-size:13.5px` }, '1,000'));
+    svg.append(el('text', { x: X1, y: H - 16, 'text-anchor': 'middle', style: `fill:${css('--ink')};font-size:13.5px` }, nFull ? nFull.toLocaleString('en-US') : 'full'));
+    svg.append(el('text', { x: (X0 + X1) / 2, y: H - 1, 'text-anchor': 'middle', style: 'font-size:12.5px' }, 'training images'));
+    for (const m of M){
+      const a1 = k1[m]?.test.bal_acc, af = kf[m]?.test.bal_acc;
+      if (a1 != null && af != null) svg.append(el('line', { x1: X0, x2: X1, y1: ys(a1), y2: ys(af), stroke: COL[m], 'stroke-width': m === 'vpt' ? 3.5 : 2.5, 'stroke-dasharray': m === 'full' ? '7 5' : 'none' }));
+      for (const [x, q] of [[X0, a1], [X1, af]]) if (q != null) svg.append(el('circle', { cx: x, cy: ys(q), r: m === 'vpt' ? 6 : 5, fill: m === 'full' ? css('--paper') : COL[m], stroke: COL[m], 'stroke-width': 2.5 }));
+    }
+    const labels = (side, x, anchor) => M.map(m => [m, (side === 1 ? k1 : kf)[m]?.test.bal_acc]).filter(e => e[1] != null).sort((a, c) => c[1] - a[1])
+      .reduce((prevY, [m, q]) => { let y = ys(q) + 5; if (y - prevY < 16) y = prevY + 16;
+        svg.append(el('text', { x, y, 'text-anchor': anchor, style: `font-size:13.5px;fill:${COL[m]};${m === 'vpt' ? 'font-weight:600' : ''}` }, q.toFixed(1))); return y; }, -1e9);
+    labels(1, X0 - 11, 'end'); labels(2, X1 + 11, 'start');
+    const missing = M.filter(m => !k1[m] || !kf[m]).map(m => NAME[m].toLowerCase());
+    if (missing.length) svg.append(el('text', { x: X1 + 11, y: H - 46, style: `font-size:12px;fill:${css('--ink-3')}` }, 'training: ' + missing.join(', ')));
+    box.append(svg);
+    $('#slopes').append(box);
+  }
+
+  /* 17c · complete table */
+  const at = $('#alltab tbody');
+  const c2 = (r, key) => r && r.test[key] != null ? (key === 'auc' ? (r.test[key] / 100).toFixed(3) : r.test[key].toFixed(1)) : '–';
+  TASKROWS.forEach(([task, title], ti) => {
+    const k1 = R.runs[task + '_1k'] || {}, kf = R.runs[task + '_full'] || {};
+    M.forEach((m, i) => {
+      const tr = document.createElement('tr'); if (m === 'vpt') tr.className = 'hl';
+      const size = (kf[m] || k1[m])?.file_kb;
+      tr.innerHTML = `<td>${i === 0 ? `<b style="color:var(--ink)">${title}</b>` : ''}</td><td style="text-align:left">${NAME[m]}</td>` +
+        [k1[m], kf[m]].map(r => ['acc', 'bal_acc', 'auc'].map(k => `<td${k === 'bal_acc' ? ' style="font-weight:600"' : ''}>${c2(r, k)}</td>`).join('')).join('') +
+        `<td>${size ? mb(size) : '–'}</td>`;
+      if (i === 2 && ti < 2) tr.querySelectorAll('td').forEach(td => { td.style.borderBottom = '1.5px solid var(--ink-3)'; });
+      at.append(tr);
+    });
+  });
+})();
+
+/* ---------------- 18, 19 · live demo: the real models, run in this browser (default) or on a Gradio server ---------------- */
+(function(){
+  // Where the inference runs. "browser": onnxruntime-web loads the exported models from MODELS (demo/vpt/export_onnx.py).
+  // A URL such as http://127.0.0.1:7860/ uses the Gradio server in demo/vpt/app.py instead. Override with ?demo=...
+  const DEFAULT = 'browser';
+  const MODELS = new URLSearchParams(location.search).get('models') || 'https://huggingface.co/valinor61/vpt-medmnist/resolve/main/';
+  const ORT = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/dist/';
+  const TASKS = { dermamnist: 'Skin lesion', bloodmnist: 'Blood cell', pneumoniamnist: 'Chest X-ray' };
+  const SHORT = { 'actinic keratoses and intraepithelial carcinoma': 'actinic keratosis / IEC', 'benign keratosis-like lesions': 'benign keratosis-like',
+                  'immature granulocytes(myelocytes, metamyelocytes and promyelocytes)': 'immature granulocyte' };
+  const short = n => SHORT[n] || n;
+  // Random test images per task (written by demo/vpt/export_samples.py)
+  const SAMPLES = {"dermamnist": [{"file": "dermamnist-0-0.png", "label": "actinic keratoses and intraepithelial carcinoma", "index": 1887}, {"file": "dermamnist-1-0.png", "label": "basal cell carcinoma", "index": 1158}, {"file": "dermamnist-2-0.png", "label": "benign keratosis-like lesions", "index": 1326}, {"file": "dermamnist-3-0.png", "label": "dermatofibroma", "index": 1229}, {"file": "dermamnist-4-0.png", "label": "melanoma", "index": 1217}, {"file": "dermamnist-5-0.png", "label": "melanocytic nevi", "index": 1553}, {"file": "dermamnist-6-0.png", "label": "vascular lesions", "index": 1743}], "bloodmnist": [{"file": "bloodmnist-0-0.png", "label": "basophil", "index": 753}, {"file": "bloodmnist-1-0.png", "label": "eosinophil", "index": 150}, {"file": "bloodmnist-2-0.png", "label": "erythroblast", "index": 1113}, {"file": "bloodmnist-3-0.png", "label": "immature granulocytes(myelocytes, metamyelocytes and promyelocytes)", "index": 945}, {"file": "bloodmnist-4-0.png", "label": "lymphocyte", "index": 3046}, {"file": "bloodmnist-5-0.png", "label": "monocyte", "index": 3089}, {"file": "bloodmnist-6-0.png", "label": "neutrophil", "index": 13}, {"file": "bloodmnist-7-0.png", "label": "platelet", "index": 1737}], "pneumoniamnist": [{"file": "pneumoniamnist-0-0.png", "label": "normal", "index": 71}, {"file": "pneumoniamnist-0-1.png", "label": "normal", "index": 485}, {"file": "pneumoniamnist-0-2.png", "label": "normal", "index": 501}, {"file": "pneumoniamnist-1-0.png", "label": "pneumonia", "index": 219}, {"file": "pneumoniamnist-1-1.png", "label": "pneumonia", "index": 200}, {"file": "pneumoniamnist-1-2.png", "label": "pneumonia", "index": 512}]};
+  const qs = new URLSearchParams(location.search);
+  const ep = $('#endpoint');
+  let saved = null; try { saved = localStorage.getItem('vpt-endpoint'); } catch (e) {}
+  ep.value = qs.get('demo') || saved || DEFAULT;
+  let task = 'dermamnist', current = null, busy = false;
+
+  function status(kind, text){ $$('.status').forEach(st => { st.className = 'status ' + kind; $('.st-text', st).textContent = text; }); }
+  function bars(host, probs, n){
+    const ent = probs ? Object.entries(probs).sort((a, b) => b[1] - a[1]) : [];
+    host.innerHTML = '';
+    for (let i = 0; i < Math.min(n, Math.max(ent.length, 2)); i++){
+      const [nm, p] = ent[i] || ['–', 0];
+      const r = document.createElement('div'); r.className = 'row5' + (ent[i] ? '' : ' empty');
+      r.innerHTML = `<div class="nm">${short(nm)}</div><div class="pc">${ent[i] ? (p * 100).toFixed(1) + '%' : ''}</div><div class="tr"><i></i></div>`;
+      host.append(r);
+      requestAnimationFrame(() => requestAnimationFrame(() => { r.querySelector('i').style.width = (p * 100).toFixed(1) + '%'; }));
+    }
+  }
+  const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+  async function blobOf(src){ return (await fetch(src)).blob(); }
+  const mbB = B => B < 1e6 ? `${Math.round(B / 1e3)} KB` : `${(B / 1e6).toFixed(B < 1e7 ? 1 : 0)} MB`;
+
+  /* ---------- engine 1: in the browser, onnxruntime-web ---------- */
+  const browser = (() => {
+    let ort = null, meta = null, enc = null, ready = null;
+    const full = {}, prompts = {};
+    async function fetchCached(name, label){
+      const url = MODELS + name;
+      let cache = null;
+      try { cache = await caches.open('vpt-models-v1'); const hit = await cache.match(url); if (hit) return new Uint8Array(await hit.arrayBuffer()); } catch (e) {}
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`${name}: HTTP ${res.status}`);
+      const total = +res.headers.get('content-length') || 0, reader = res.body.getReader(), parts = [];
+      let got = 0;
+      for (;;){
+        const { done, value } = await reader.read(); if (done) break;
+        parts.push(value); got += value.length;
+        status('busy', `Downloading ${label}: ${(got / 1e6).toFixed(0)}${total ? ' of ' + (total / 1e6).toFixed(0) : ''} MB (once; cached afterwards)`);
+      }
+      const buf = new Uint8Array(got); let o = 0; for (const p of parts){ buf.set(p, o); o += p.length; }
+      try { if (cache) await cache.put(url, new Response(buf)); } catch (e) {}
+      return buf;
+    }
+    async function session(buf){ return ort.InferenceSession.create(buf, { executionProviders: ['wasm'], graphOptimizationLevel: 'all' }); }
+    function init(){
+      return ready || (ready = (async () => {
+        status('busy', 'Loading onnxruntime-web …');
+        ort = await import(ORT + 'ort.wasm.min.mjs');
+        ort.env.wasm.wasmPaths = ORT;
+        ort.env.wasm.numThreads = self.crossOriginIsolated ? Math.min(8, navigator.hardwareConcurrency || 4) : 1;
+        meta = await (await fetch(MODELS + 'heads.json')).json();
+        enc = await session(await fetchCached(meta.encoder, 'the base model (ViT-B/16, ImageNet-21k)'));
+        return true;
+      })().catch(e => { ready = null; throw e; }));
+    }
+    async function loadPrompts(t){
+      await init();
+      if (!prompts[t]) prompts[t] = new Float32Array((await fetchCached(meta.tasks[t].methods.vpt.prompts, `${TASKS[t].toLowerCase()} prompts`)).slice().buffer);
+    }
+    async function loadTask(t){
+      await loadPrompts(t);
+      if (!full[t]) full[t] = await session(await fetchCached(meta.tasks[t].methods.full.model, `the fully fine-tuned ${TASKS[t].toLowerCase()} model`));
+    }
+    async function pixels(blob){
+      const bmp = await createImageBitmap(blob), S = 224, c = new OffscreenCanvas(S, S), x = c.getContext('2d');
+      const k = Math.max(S / bmp.width, S / bmp.height), w = bmp.width * k, h = bmp.height * k;   // resize, then centre crop
+      x.drawImage(bmp, (S - w) / 2, (S - h) / 2, w, h);
+      const d = x.getImageData(0, 0, S, S).data, out = new Float32Array(3 * S * S);
+      for (let i = 0; i < S * S; i++) for (let ch = 0; ch < 3; ch++) out[ch * S * S + i] = (d[i * 4 + ch] / 255 - meta.mean[ch]) / meta.std[ch];
+      return out;
+    }
+    function head(feat, off, e, classes){
+      const w = e.head_w, b = e.head_b, z = b.map((bc, c) => { let s = bc; const row = w[c]; for (let j = 0; j < 768; j++) s += feat[off + j] * row[j]; return s; });
+      const mx = Math.max(...z), ex = z.map(v => Math.exp(v - mx)), sum = ex.reduce((a, v) => a + v, 0);
+      return Object.fromEntries(classes.map((c, i) => [c, ex[i] / sum]));
+    }
+    async function encode(sess, imgs, P, B){
+      const image = new ort.Tensor('float32', imgs, [B, 3, 224, 224]);
+      const pr = P ? new ort.Tensor('float32', P, [B, 12, 50, 768]) : new ort.Tensor('float32', new Float32Array(0), [B, 12, 0, 768]);
+      const t0 = performance.now(), out = await sess.run({ image, prompts: pr });
+      return [out.cls.data, performance.now() - t0];
+    }
+    const device = () => `in this browser (onnxruntime-web, ${ort.env.wasm.numThreads} thread${ort.env.wasm.numThreads > 1 ? 's' : ''})`;
+    async function classify(blob, t){
+      await loadTask(t);
+      const tm = meta.tasks[t], img = await pixels(blob), methods = {};
+      const runs = { linear: () => encode(enc, img, null, 1), vpt: () => encode(enc, img, prompts[t], 1), full: () => encode(full[t], img, null, 1) };
+      for (const k of ['linear', 'vpt', 'full']){
+        status('busy', `Running ${{ linear: 'the linear probe', vpt: 'VPT-deep', full: 'the fully fine-tuned model' }[k]} in this browser …`);
+        const [f, ms] = await runs[k](), e = tm.methods[k];
+        methods[k] = { probs: head(f, 0, e, tm.classes), ms, tokens: k === 'vpt' ? 247 : 197, file_kb: e.file_bytes / 1024, test: e.test_web };
+      }
+      return { methods, device: device() };
+    }
+    async function mixed(blobs){
+      const ts = Object.keys(TASKS);
+      for (const t of ts) await loadPrompts(t);   // the mixed batch needs only the shared base model and the prompts
+      const B = ts.length, imgs = new Float32Array(B * 3 * 224 * 224), P = new Float32Array(B * 12 * 50 * 768);
+      for (let i = 0; i < B; i++){ imgs.set(await pixels(blobs[i]), i * 3 * 224 * 224); P.set(prompts[ts[i]], i * 12 * 50 * 768); }
+      const [f, ms] = await encode(enc, imgs, P, B);
+      return { results: ts.map((t, i) => ({ task: t, probs: head(f, i * 768, meta.tasks[t].methods.vpt, meta.tasks[t].classes), prompt_kb: meta.tasks[t].methods.vpt.file_bytes / 1024 })), ms, batch: B, device: device() };
+    }
+    return { name: 'browser', init, classify, mixed };
+  })();
+
+  /* ---------- engine 2: a Gradio server running demo/vpt/app.py ---------- */
+  const server = url => {
+    let client = null, gradio = null;
+    async function init(){
+      if (client) return true;
+      status('busy', 'Connecting to ' + url + ' …');
+      gradio = await import('https://cdn.jsdelivr.net/npm/@gradio/client/dist/index.min.js');
+      client = await gradio.Client.connect(url.replace(/^https:\/\/huggingface\.co\/spaces\//, '').replace(/\/$/, '') || url);
+      return true;
+    }
+    async function classify(blob, t){ await init(); return (await client.predict('/classify', { image: gradio.handle_file(blob), task: t })).data[3]; }
+    async function mixed(blobs){ await init(); return (await client.predict('/mixed', { derma: gradio.handle_file(blobs[0]), blood: gradio.handle_file(blobs[1]), xray: gradio.handle_file(blobs[2]) })).data[0]; }
+    return { name: url, init, classify, mixed };
+  };
+
+  let engine = null;
+  function getEngine(){
+    const v = ep.value.trim() || 'browser';
+    if (!engine || engine.name !== v){ engine = v === 'browser' ? browser : server(v); try { localStorage.setItem('vpt-endpoint', v); } catch (e) {} }
+    return engine;
+  }
+  function failed(err){ status('err', (getEngine().name === 'browser' ? 'Could not run in the browser: ' : 'Server error: ') + (err.message || err)); console.error(err); }
+
+  /* slide 18: one image, all three methods */
+  function showThumbs(){
+    const th = $('#thumbs'); th.innerHTML = '';
+    for (const smp of SAMPLES[task] || []){
+      const b = document.createElement('button'); b.type = 'button'; b.setAttribute('aria-pressed', 'false'); b.title = short(smp.label);
+      b.innerHTML = `<img src="${ASSETS}${smp.file}" alt="Test image, ${smp.label}">`;
+      b.addEventListener('click', async () => { $$('#thumbs button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); useBlob(await blobOf(ASSETS + smp.file), ASSETS + smp.file, smp.label); });
+      th.append(b);
+    }
+  }
+  function useBlob(blob, src, truth){
+    current = blob;
+    const d = $('#drop'); d.innerHTML = ''; const im = new Image(); im.src = src || URL.createObjectURL(blob); im.alt = 'Selected image'; d.append(im);
+    $('#truth').innerHTML = truth ? `Ground truth: <b>${short(truth)}</b>` : 'Your image, no label';
+    classify();
+  }
+  function emptyCols(){ $$('#s-demo .mcol').forEach(c => { bars($('.bars', c), null, 3); $('.mtime', c).textContent = ''; }); }
+  async function classify(){
+    if (busy || !current) return; busy = true;
+    try {
+      const t = performance.now();
+      const o = await getEngine().classify(current, task);
+      for (const c of $$('#s-demo .mcol')){
+        const r = o.methods[c.dataset.m];
+        if (!r){ bars($('.bars', c), null, 3); $('.mtime', c).textContent = 'not available'; continue; }
+        bars($('.bars', c), r.probs, 3);
+        $('.meta', c).textContent = { full: `a whole new copy: ${mbB(r.file_kb * 1024)} for this task`, vpt: `+ ${mbB(r.file_kb * 1024)} of prompts and head`, linear: `+ a ${mbB(r.file_kb * 1024)} head` }[c.dataset.m];
+        $('.mtime', c).textContent = `${r.ms.toFixed(0)} ms · ${r.tokens} tokens · test bal. acc. ${r.test.bal_acc.toFixed(1)}%`;
+      }
+      status('ok', `All three models done in ${Math.round(performance.now() - t)} ms · ${o.device}`);
+    } catch (err){ failed(err); }
+    finally { busy = false; }
+  }
+  function setTask(t, auto){
+    task = t; $$('#task button').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.t === t)));
+    showThumbs();
+    const list = SAMPLES[t] || [];
+    if (auto && list.length) $('#thumbs').children[Math.floor(Math.random() * list.length)].click();
+  }
+  $('#task').addEventListener('click', e => { const b = e.target.closest('button'); if (b && !busy) setTask(b.dataset.t, true); });
+  const drop = $('#drop'), file = $('#file');
+  drop.addEventListener('click', () => file.click());
+  drop.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); file.click(); } });
+  file.addEventListener('change', () => { if (file.files[0]){ $$('#thumbs button').forEach(x => x.setAttribute('aria-pressed', 'false')); useBlob(file.files[0]); } });
+  drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+  drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); const f = e.dataTransfer.files[0]; if (f && f.type.startsWith('image/')) useBlob(f); });
+  addEventListener('paste', e => { if (slides[cur].id !== 's-demo') return; const f = [...(e.clipboardData?.files || [])].find(f => f.type.startsWith('image/')); if (f) useBlob(f); });
+  const reconnect = () => { engine = null; getEngine().init().then(() => status('ok', 'Ready · ' + (getEngine().name === 'browser' ? 'models run in this browser' : getEngine().name)), failed); };
+  $('#connect').addEventListener('click', reconnect);
+  ep.addEventListener('keydown', e => { if (e.key === 'Enter') reconnect(); });
+  $('#s-demo').addEventListener('enter', () => { if (!current) setTask(task, true); });
+  showThumbs(); emptyCols();
+
+  /* slide 19: one image per task, one forward pass */
+  const mx = $('#mixed');
+  const cols = Object.keys(TASKS).map(t => {
+    const c = document.createElement('div'); c.className = 'mx';
+    c.innerHTML = `<img alt=""><div class="tn">${TASKS[t]}</div><div class="tf">–</div><div class="truth"></div><div class="bars"></div>`;
+    mx.append(c); return { t, c };
+  });
+  async function runMixed(){
+    if (busy) return;
+    const picks = cols.map(({ t }) => pick(SAMPLES[t] || []));
+    if (picks.some(p => !p)) return;
+    cols.forEach(({ c }, i) => { $('img', c).src = ASSETS + picks[i].file; $('img', c).alt = picks[i].label; $('.truth', c).innerHTML = `Ground truth: <b>${short(picks[i].label)}</b>`; bars($('.bars', c), null, 3); });
+    busy = true;
+    try {
+      const blobs = await Promise.all(picks.map(p => blobOf(ASSETS + p.file)));
+      status('busy', 'One forward pass, three tasks …');
+      const o = await getEngine().mixed(blobs);
+      o.results.forEach((r, i) => { bars($('.bars', cols[i].c), r.probs, 3); $('.tf', cols[i].c).textContent = `${r.task} prompts · ${mbB(r.prompt_kb * 1024)}`; });
+      $('#mixed-info').textContent = `Batch of ${o.batch} · one forward pass through the same frozen base model (ViT-B/16, ImageNet-21k) · ${o.ms.toFixed(0)} ms · ${o.device}`;
+      status('ok', 'Done');
+    } catch (err){ failed(err); }
+    finally { busy = false; }
+  }
+  $('#reshuffle').addEventListener('click', runMixed);
+  $('#s-mixed').addEventListener('enter', runMixed);
+  cols.forEach(({ c }) => bars($('.bars', c), null, 3));
+})();
+
+/* ---------------- start ---------------- */
+const fromHash = () => { const h = parseInt(location.hash.slice(1), 10); return isNaN(h) ? 0 : h - 1; };
+addEventListener('hashchange', () => { if (fromHash() !== cur) show(fromHash()); });
+show(fromHash());
+})();
+</script>
+</body>
+</html>

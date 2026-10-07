@@ -1,0 +1,9 @@
+.venv/
+data/
+logs/
+__pycache__/
+preview/
+# full fine-tuning checkpoints are whole 343 MB backbones
+weights/*_full_1k.safetensors
+weights/*_full_full.safetensors
+web/*.onnx

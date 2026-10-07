@@ -1,0 +1,31 @@
+{
+  "task": "pneumoniamnist",
+  "method": "full_full",
+  "classes": [
+    "normal",
+    "pneumonia"
+  ],
+  "backbone_id": "vit_base_patch16_224.orig_in21k",
+  "num_prompts": 0,
+  "deep": true,
+  "train_images": 4708,
+  "base_lr": 0.001,
+  "epochs": 20,
+  "select": "bal_acc",
+  "val": {
+    "acc": 98.66,
+    "bal_acc": 98.37,
+    "auc": 99.86
+  },
+  "test": {
+    "acc": 94.87,
+    "bal_acc": 93.25,
+    "auc": 99.37
+  },
+  "train_minutes": 9.3,
+  "backbone": 85798656,
+  "prompts": 0,
+  "head": 1538,
+  "trainable": 85800194,
+  "trainable_pct": 100.00179256887193
+}

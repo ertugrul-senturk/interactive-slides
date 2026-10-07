@@ -1,0 +1,37 @@
+{
+  "task": "bloodmnist",
+  "method": "vpt-deep-p50_full",
+  "classes": [
+    "basophil",
+    "eosinophil",
+    "erythroblast",
+    "immature granulocytes(myelocytes, metamyelocytes and promyelocytes)",
+    "lymphocyte",
+    "monocyte",
+    "neutrophil",
+    "platelet"
+  ],
+  "backbone_id": "vit_base_patch16_224.orig_in21k",
+  "num_prompts": 50,
+  "deep": true,
+  "train_images": 11959,
+  "base_lr": 2.5,
+  "epochs": 20,
+  "select": "bal_acc",
+  "val": {
+    "acc": 99.07,
+    "bal_acc": 99.23,
+    "auc": 99.99
+  },
+  "test": {
+    "acc": 99.06,
+    "bal_acc": 99.14,
+    "auc": 99.98
+  },
+  "train_minutes": 19.8,
+  "backbone": 85798656,
+  "prompts": 460800,
+  "head": 6152,
+  "trainable": 466952,
+  "trainable_pct": 0.5442416254166033
+}

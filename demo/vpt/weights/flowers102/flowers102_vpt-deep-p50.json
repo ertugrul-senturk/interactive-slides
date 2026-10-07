@@ -1,0 +1,16 @@
+{
+  "task": "flowers102",
+  "method": "vpt-deep-p50",
+  "backbone": 85798656,
+  "num_prompts": 50,
+  "deep": true,
+  "base_lr": 2.5,
+  "epochs": 100,
+  "val_acc": 99.61,
+  "test_acc": 99.11,
+  "train_minutes": 8.3,
+  "prompts": 460800,
+  "head": 78438,
+  "trainable": 539238,
+  "trainable_pct": 0.6284923623978446
+}

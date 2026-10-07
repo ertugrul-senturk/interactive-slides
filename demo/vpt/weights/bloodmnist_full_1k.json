@@ -1,0 +1,37 @@
+{
+  "task": "bloodmnist",
+  "method": "full_1k",
+  "classes": [
+    "basophil",
+    "eosinophil",
+    "erythroblast",
+    "immature granulocytes(myelocytes, metamyelocytes and promyelocytes)",
+    "lymphocyte",
+    "monocyte",
+    "neutrophil",
+    "platelet"
+  ],
+  "backbone_id": "vit_base_patch16_224.orig_in21k",
+  "num_prompts": 0,
+  "deep": true,
+  "train_images": 1000,
+  "base_lr": 0.001,
+  "epochs": 60,
+  "select": "bal_acc",
+  "val": {
+    "acc": 98.31,
+    "bal_acc": 98.57,
+    "auc": 99.97
+  },
+  "test": {
+    "acc": 97.63,
+    "bal_acc": 97.97,
+    "auc": 99.91
+  },
+  "train_minutes": 7.4,
+  "backbone": 85798656,
+  "prompts": 0,
+  "head": 6152,
+  "trainable": 85804808,
+  "trainable_pct": 100.00717027548777
+}

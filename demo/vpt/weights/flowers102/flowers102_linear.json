@@ -1,0 +1,16 @@
+{
+  "task": "flowers102",
+  "method": "linear",
+  "backbone": 85798656,
+  "num_prompts": 0,
+  "deep": true,
+  "base_lr": 10.0,
+  "epochs": 100,
+  "val_acc": 99.22,
+  "test_acc": 99.19,
+  "train_minutes": 3.4,
+  "prompts": 0,
+  "head": 78438,
+  "trainable": 78438,
+  "trainable_pct": 0.09142101246900651
+}
