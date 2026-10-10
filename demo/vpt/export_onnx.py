@@ -4,15 +4,18 @@ Free Hugging Face Spaces no longer run Gradio, so the deck runs the models itsel
   encoder.fp16.onnx        the frozen base model, ViT-B/16 ImageNet-21k. Inputs: image (B,3,224,224)
                            and prompts (B,12,P,768); output: the final [CLS] feature (B,768).
                            P = 0 gives the plain backbone (linear probe), P = 50 gives VPT-deep.
-  full_<task>.fp16.onnx    the same graph with fully fine-tuned weights (fed P = 0).
-  <task>_vpt_prompts.bin   float32 prompts, 12 x 50 x 768.
-  heads.json               every linear head (linear probe, VPT, full) and class names, plus metrics.
+  full_<task>.fp16.onnx    the same graph with fully fine-tuned weights (fed P = 0); full_<task>_1k.fp16.onnx
+                           is the model fine-tuned on 1,000 images.
+  <task>_vpt_prompts.bin   float32 prompts, 12 x 50 x 768 (<task>_vpt_prompts_1k.bin: trained on 1,000 images).
+  heads.json               every linear head (linear probe, VPT, full) and class names, plus metrics; the
+                           full-data models under "methods", the 1,000-image ones under "methods_1k".
 Weights are stored in fp16 (172 MB per model instead of 343 MB). int8 quantization was smaller but changed
 about 5% of predictions (quant_check.py); fp16 agrees with PyTorch on every test image checked.
 Every exported model is checked against PyTorch and re-scored on the whole test split, so the deck
 can report the accuracy of exactly what runs in the browser.
 
-  python export_onnx.py            # export, check, evaluate
+  python export_onnx.py                  # export, check, evaluate both regimes (full data and 1,000 images)
+  python export_onnx.py --regimes 1k     # only the 1,000-image models, keeping the rest of heads.json
 """
 import json
 import time
@@ -100,67 +103,84 @@ def test_batches(task, bs=64):
         yield a.transpose(0, 3, 1, 2).copy(), y[i:i + bs]
 
 
-def main():
+# Two training regimes per task: "full" (all training images) and "1k" (1,000 images, as in VTAB-1k).
+# heads.json keeps the full-data models under "methods" and the 1,000-image models under "methods_1k".
+REGIMES = {"full": ("methods", ""), "1k": ("methods_1k", "_1k")}
+
+
+def main(regimes=("full", "1k")):
     OUT.mkdir(exist_ok=True)
     torch.set_grad_enabled(False)
-    base = VPTViT(2, num_prompts=0).vit.eval()
-    print("base model", flush=True)
-    sessions = {"base": export(base, OUT / "encoder.fp16.onnx")}
-    heads = {"backbone": "timm/vit_base_patch16_224.orig_in21k", "mean": [0.5] * 3, "std": [0.5] * 3, "tasks": {}}
+    hj = OUT / "heads.json"
+    heads = json.loads(hj.read_text()) if hj.exists() else {}
+    heads.update({"backbone": "timm/vit_base_patch16_224.orig_in21k", "mean": [0.5] * 3, "std": [0.5] * 3})
+    heads.setdefault("tasks", {})
+    enc_path = OUT / "encoder.fp16.onnx"
+    if "full" in regimes or not enc_path.exists():
+        print("base model", flush=True)
+        base_sess = export(VPTViT(2, num_prompts=0).vit.eval(), enc_path)
+    else:                                                # the frozen base model is the same for every regime
+        base_sess = ort.InferenceSession(str(enc_path), providers=["CPUExecutionProvider"])
     for task in TASKS:
-        print(task, flush=True)
-        t = {"methods": {}}
-        for method, tag in (("linear", "linear"), ("vpt", "vpt-deep-p50"), ("full", "full")):
-            meta = json.loads((W / f"{task}_{tag}_full.json").read_text())
-            state = load_file(W / f"{task}_{tag}_full.safetensors")
-            t["classes"] = meta["classes"]
-            w, b = load_head(state)
-            entry = {"head_w": w.round(7).tolist(), "head_b": b.round(7).tolist(), "train_images": meta["train_images"],
-                     "test_torch": meta["test"], "trainable": meta["trainable"]}
-            if method == "vpt":
-                pr = state["prompts"].numpy().astype(np.float32)
-                (OUT / f"{task}_vpt_prompts.bin").write_bytes(pr.tobytes())
-                entry["prompts"] = f"{task}_vpt_prompts.bin"
-                entry["prompts_shape"] = list(pr.shape)
-                entry["file_bytes"] = (W / f"{task}_{tag}_full.safetensors").stat().st_size
-            elif method == "full":
-                m = VPTViT(len(meta["classes"]), num_prompts=0, pretrained=False)
-                m.load_state_dict(state)
-                path = OUT / f"full_{task}.fp16.onnx"
-                sessions[task] = export(m.vit.eval(), path)
-                entry["model"] = path.name
-                entry["file_bytes"] = (W / f"{task}_{tag}_full.safetensors").stat().st_size
-                entry["web_bytes"] = path.stat().st_size
-            else:
-                entry["file_bytes"] = (W / f"{task}_{tag}_full.safetensors").stat().st_size
-            t["methods"][method] = entry
-        # re-score exactly what the browser runs
-        n = len(t["classes"])
-        probs = {k: [] for k in t["methods"]}
-        ys = []
-        pr = np.fromfile(OUT / t["methods"]["vpt"]["prompts"], dtype=np.float32).reshape(t["methods"]["vpt"]["prompts_shape"])
-        t0 = time.time()
-        for xb, yb in test_batches(task):
-            B = len(yb)
-            empty = np.zeros((B, 12, 0, 768), np.float32)
-            f_base = sessions["base"].run(None, {"image": xb, "prompts": empty})[0]
-            f_vpt = sessions["base"].run(None, {"image": xb, "prompts": np.broadcast_to(pr, (B, *pr.shape)).copy()})[0]
-            f_full = sessions[task].run(None, {"image": xb, "prompts": empty})[0]
-            for k, f in (("linear", f_base), ("vpt", f_vpt), ("full", f_full)):
-                e = t["methods"][k]
-                probs[k].append(softmax_np(f @ np.array(e["head_w"], np.float32).T + np.array(e["head_b"], np.float32)))
-            ys.append(yb)
-        y = np.concatenate(ys)
-        for k in probs:
-            t["methods"][k]["test_web"] = score(np.concatenate(probs[k]), y, n)
-            print(f"  {k:6s} torch {t['methods'][k]['test_torch']}  fp16 onnx {t['methods'][k]['test_web']}", flush=True)
-        print(f"  scored {len(y)} test images in {time.time() - t0:.0f}s", flush=True)
-        heads["tasks"][task] = t
-    heads["encoder"] = "encoder.fp16.onnx"
-    heads["encoder_bytes"] = (OUT / "encoder.fp16.onnx").stat().st_size
-    (OUT / "heads.json").write_text(json.dumps(heads))
+        t = heads["tasks"].setdefault(task, {})
+        for regime in regimes:
+            key, sfx = REGIMES[regime]
+            print(task, regime, flush=True)
+            methods, full_sess = {}, None
+            for method, tag in (("linear", "linear"), ("vpt", "vpt-deep-p50"), ("full", "full")):
+                src = W / f"{task}_{tag}_{regime}"
+                meta = json.loads(src.with_suffix(".json").read_text())
+                state = load_file(src.with_suffix(".safetensors"))
+                t["classes"] = meta["classes"]
+                w, b = load_head(state)
+                entry = {"head_w": w.round(7).tolist(), "head_b": b.round(7).tolist(), "train_images": meta["train_images"],
+                         "test_torch": meta["test"], "trainable": meta["trainable"],
+                         "file_bytes": src.with_suffix(".safetensors").stat().st_size}
+                if method == "vpt":
+                    pr = state["prompts"].numpy().astype(np.float32)
+                    name = f"{task}_vpt_prompts{sfx}.bin"
+                    (OUT / name).write_bytes(pr.tobytes())
+                    entry["prompts"] = name
+                    entry["prompts_shape"] = list(pr.shape)
+                elif method == "full":
+                    m = VPTViT(len(meta["classes"]), num_prompts=0, pretrained=False)
+                    m.load_state_dict(state)
+                    path = OUT / f"full_{task}{sfx}.fp16.onnx"
+                    full_sess = export(m.vit.eval(), path)
+                    entry["model"] = path.name
+                    entry["web_bytes"] = path.stat().st_size
+                methods[method] = entry
+            # re-score exactly what the browser runs
+            n = len(t["classes"])
+            probs = {k: [] for k in methods}
+            ys = []
+            pr = np.fromfile(OUT / methods["vpt"]["prompts"], dtype=np.float32).reshape(methods["vpt"]["prompts_shape"])
+            t0 = time.time()
+            for xb, yb in test_batches(task):
+                B = len(yb)
+                empty = np.zeros((B, 12, 0, 768), np.float32)
+                f_base = base_sess.run(None, {"image": xb, "prompts": empty})[0]
+                f_vpt = base_sess.run(None, {"image": xb, "prompts": np.broadcast_to(pr, (B, *pr.shape)).copy()})[0]
+                f_full = full_sess.run(None, {"image": xb, "prompts": empty})[0]
+                for k, f in (("linear", f_base), ("vpt", f_vpt), ("full", f_full)):
+                    e = methods[k]
+                    probs[k].append(softmax_np(f @ np.array(e["head_w"], np.float32).T + np.array(e["head_b"], np.float32)))
+                ys.append(yb)
+            y = np.concatenate(ys)
+            for k in probs:
+                methods[k]["test_web"] = score(np.concatenate(probs[k]), y, n)
+                print(f"  {k:6s} torch {methods[k]['test_torch']}  fp16 onnx {methods[k]['test_web']}", flush=True)
+            print(f"  scored {len(y)} test images in {time.time() - t0:.0f}s", flush=True)
+            t[key] = methods
+            hj.write_text(json.dumps(heads))                 # saved after every regime, so a crash loses little
+    heads["encoder"] = enc_path.name
+    heads["encoder_bytes"] = enc_path.stat().st_size
+    hj.write_text(json.dumps(heads))
     print("wrote", sorted(p.name for p in OUT.iterdir()))
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--regimes", default="full,1k", help="comma-separated subset of: full, 1k")
+    main(tuple(ap.parse_args().regimes.split(",")))

@@ -24,12 +24,12 @@ export default async function ViewPage({ params }: { params: Promise<{ file: str
   return (
     <div className="viewer">
       <header className="bar">
-        <Link href="/" className="back">← all slides</Link>
+        <Link href="/" className="back">← All slides</Link>
         <span className="bartitle">{deck.title}</span>
         <span className="baractions">
-          <a href={deck.href} target="_blank" rel="noopener">open file</a>
+          <a href={deck.href} target="_blank" rel="noopener">Open file</a>
           {deck.pptx && (
-            <a className="dl" href={deck.pptx.href} download title={`${deck.pptx.sizeKB} KB`}>download .pptx</a>
+            <a className="dl" href={deck.pptx.href} download title={`PowerPoint, ${deck.pptx.sizeKB} KB`}>Download .pptx</a>
           )}
           <Viewer />
         </span>

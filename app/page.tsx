@@ -23,10 +23,10 @@ export default function Home() {
               <span className="actions">
                 {d.pptx && (
                   <a className="dl" href={d.pptx.href} download title={`PowerPoint, ${d.pptx.sizeKB} KB`}>
-                    .pptx ↓
+                    Download .pptx
                   </a>
                 )}
-                <Link className="open" href={`/view/${encodeURIComponent(d.file)}`}>open →</Link>
+                <Link className="open" href={`/view/${encodeURIComponent(d.file)}`}>Open</Link>
               </span>
             </li>
           ))}

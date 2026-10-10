@@ -24,6 +24,6 @@ export default function Viewer() {
     el.contentWindow?.focus();
   }
   return (
-    <button type="button" className="fs" onClick={fullscreen}>fullscreen</button>
+    <button type="button" className="fs" onClick={fullscreen}>Fullscreen</button>
   );
 }

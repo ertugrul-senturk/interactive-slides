@@ -38,8 +38,20 @@ models itself, in the viewer's browser, with onnxruntime-web:
 * `upload_models.py` publishes them to the free model repository
   [valinor61/vpt-medmnist](https://huggingface.co/valinor61/vpt-medmnist); the deck downloads them
   from there once (about 350 MB for the first task) and keeps them in the browser cache.
-* `app.py` is the same demo as a Gradio server. Run it locally and type its URL
-  (http://127.0.0.1:7860/) into the demo slide's server field as a fallback.
+* The demo slide can switch all three methods to the models trained on 1,000 images
+  (`heads.json` → `methods_1k`, written by `export_onnx.py --regimes 1k`). Linear probe and VPT-deep
+  only swap a head and a 1.8 MB prompt file; full fine-tuning loads another 172 MB model on first use.
+  Without `methods_1k` the toggle is disabled. Try a local export with a static server that sends
+  `Access-Control-Allow-Origin: *` and open the deck with `?models=http://localhost:8765/`.
+* `app.py` is the same demo as a Gradio server. Run it locally and pass its URL
+  (http://127.0.0.1:7860/) as `?demo=http://127.0.0.1:7860/` in the deck URL as a fallback.
+
+## Notebooks
+
+`notebooks/` walks through the same code with its outputs, in order: the VPT model and its parameter
+counts (01), the datasets (02), the training loop for all three methods with a short live run (03), every
+result and the cost benchmark (04), and the browser export check (05). `python notebooks/run_all.py`
+re-executes them.
 
 ## Files
 

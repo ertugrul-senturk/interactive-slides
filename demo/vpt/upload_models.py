@@ -21,8 +21,11 @@ args = ap.parse_args()
 heads = json.loads((WEB / "heads.json").read_text())
 rows = []
 for task, t in heads["tasks"].items():
-    for m in ("linear", "vpt", "full"):
-        e = t["methods"][m]
+    for key in ("methods_1k", "methods"):                 # 1,000 training images, then the full training set
+      for m in ("linear", "vpt", "full"):
+        if key not in t:
+            continue
+        e = t[key][m]
         rows.append(f"| {task} | {m} | {e['train_images']:,} | {e['test_torch']['acc']:.1f} | {e['test_torch']['bal_acc']:.1f} | "
                     f"{e['test_web']['bal_acc']:.1f} | {e['file_bytes'] / 1e6:.2f} MB |")
 card = f"""---
@@ -48,10 +51,13 @@ MedMNIST+ 224 × 224 tasks in three ways:
 | --- | --- |
 | `encoder.fp16.onnx` | the frozen base model; inputs `image` (B,3,224,224) normalised with mean = std = 0.5, and `prompts` (B,12,P,768); output `cls` (B,768). P = 0 for the linear probe, P = 50 for VPT-deep |
 | `full_<task>.fp16.onnx` | the fully fine-tuned model of a task (same graph, fed P = 0) |
+| `full_<task>_1k.fp16.onnx` | the same, fine-tuned on 1,000 training images |
 | `<task>_vpt_prompts.bin` | VPT-deep prompts, float32, 12 × 50 × 768 |
-| `heads.json` | every classification head, class names, and test metrics |
+| `<task>_vpt_prompts_1k.bin` | the same, trained on 1,000 training images |
+| `heads.json` | every classification head, class names, and test metrics; full-data models under `methods`, 1,000-image models under `methods_1k` |
 
-Weights are stored in fp16; on the test images checked they give the same predictions as the PyTorch models.
+Weights are stored in fp16. Every exported model was re-scored on the whole test split; the table gives the PyTorch
+and the fp16 ONNX balanced accuracy side by side.
 
 ## Test results (balanced accuracy = mean per-class recall)
 
