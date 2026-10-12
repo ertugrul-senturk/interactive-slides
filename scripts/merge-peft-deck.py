@@ -796,8 +796,8 @@ def write_prep(renames):
         return
     v_body = v[v.index("(() => {") + len("(() => {"):v.index(mark)].rstrip() + "\n"
     l_head = l[l.index("(() => {") + len("(() => {"):l.index(mark)].strip()
-    if l_head:
-        warn("prep: the LoRA prep script has parts before its demo part; they are not copied (adjust the combined prep script by hand)")
+    for a, b in renames.items():                         # the LoRA part's own freezes (storage slider, parameter buttons)
+        l_head = re.sub(r'(?<=[#"\'`])' + re.escape(a) + r"(?![\w-])", b, l_head)
     l_demo = l[l.index(mark):l.rindex("})();")].rstrip() + "\n"
     l_demo = re.sub(r"/\* DEMO_SNAPSHOT \*/.*?/\* END_DEMO_SNAPSHOT \*/", "/* DEMO_SNAPSHOT */ null /* END_DEMO_SNAPSHOT */", l_demo, flags=re.S)
     l_demo = l_demo.replace("2026-10-lora-low-rank-adaptation.html", "2026-10-peft-vpt-lora.html")
@@ -805,8 +805,14 @@ def write_prep(renames):
     for a, b in renames.items():
         l_demo = re.sub(r'(?<=[#"\'`])' + re.escape(a) + r"(?![\w-])", b, l_demo)
     out = ("// Runs inside the combined VPT + LoRA deck before it is converted to PowerPoint, where the controls cannot work.\n"
-           "// Assembled by scripts/merge-peft-deck.py: the VPT prep script without its demo part, then the LoRA prep script's demo part.\n"
-           "// The live demo shows a recorded run (see below).\n(() => {" + v_body + "\n" + l_demo + "})();\n")
+           "// Assembled by scripts/merge-peft-deck.py: the VPT prep script without its demo part, then the LoRA prep script.\n"
+           "// The live demo shows a recorded run (see below).\n(() => {" + v_body + "\n  {   // the LoRA part, in its own block: its names repeat the VPT part's\n  " + l_head + "\n  }\n\n" + l_demo + "})();\n")
+    # keep a demo run already recorded into the combined prep script (2026-10-vpt-snapshot-demo.mjs), so a rebuild does not lose it
+    if PREP_OUT.exists():
+        old_snap = re.search(r"/\* DEMO_SNAPSHOT \*/(.*?)/\* END_DEMO_SNAPSHOT \*/", PREP_OUT.read_text(encoding="utf8"), re.S)
+        if old_snap and old_snap.group(1).strip() != "null":
+            out = re.sub(r"/\* DEMO_SNAPSHOT \*/.*?/\* END_DEMO_SNAPSHOT \*/", lambda _: old_snap.group(0), out, flags=re.S)
+            note("prep: kept the demo run already recorded in the combined prep script")
     PREP_OUT.write_text(out, encoding="utf8")
     print(f"wrote {PREP_OUT.relative_to(ROOT)}")
 
