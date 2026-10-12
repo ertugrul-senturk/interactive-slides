@@ -1,23 +1,30 @@
-// Converts the HTML decks in public/decks into .pptx files next to them.
+// Converts the HTML decks in public/decks into .pptx and .pdf files next to them.
 //
-// Each deck is opened in headless Edge/Chrome at 1280×720 and stepped through with the
+// Each deck is opened in headless Chrome/Edge at 1280×720 and stepped through with the
 // right-arrow key, so every slide and every step of an animated slide becomes one
 // PowerPoint slide. For each state the visuals (photos, charts, canvases, shapes) are
 // captured with the text made transparent and used as the slide background, and the
 // text is laid back on top as editable PowerPoint text boxes at the same position,
-// font, size, colour and line breaks.
+// font, size, colour and line breaks. Each slide's <aside class="notes"> becomes the
+// PowerPoint speaker notes. The same states are also printed to a vector PDF (selectable
+// text, one page per state).
 //
-// Usage: npm run pptx                 (all decks)
-//        npm run pptx -- some-deck.html
-// Set CHROME_PATH if Edge/Chrome is not in a standard location.
+// Usage: npm run export               (all decks, .pptx and .pdf)
+//        npm run export -- some-deck.html
+//        npm run export -- --no-pdf   (PowerPoint only; npm run pptx is the same as export)
+// Set CHROME_PATH if Chrome/Edge is not in a standard location.
 // scripts/pptx-prep/<deck>.js, if present, runs in the page first to fix interactive
-// slides in one state and remove controls that would not work in PowerPoint.
+// slides in one state and remove controls that would not work in PowerPoint. It can also
+// turn one interactive slide into several static pages: window.pptxSteps = { "<slide id>":
+// [state0, state1, …] } (functions that set the slide up); state0 is applied when the slide
+// is reached, the others on the following pages, before the export moves on.
 
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import puppeteer from "puppeteer-core";
 import PptxGenJS from "pptxgenjs";
+import { PDFDocument } from "pdf-lib";
 
 const DECKS_DIR = path.join(process.cwd(), "public", "decks");
 const W = 1280, H = 720, SCALE = 2;
@@ -26,9 +33,9 @@ const PX = 1 / 96; // inches per CSS pixel
 function browserPath() {
   const candidates = [
     process.env.CHROME_PATH,
+    "C:/Program Files/Google/Chrome/Application/chrome.exe",
     "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",
     "C:/Program Files/Microsoft/Edge/Application/msedge.exe",
-    "C:/Program Files/Google/Chrome/Application/chrome.exe",
     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
     "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
     "/usr/bin/google-chrome",
@@ -211,12 +218,17 @@ function addTextBlocks(slide, blocks, fonts) {
   }
 }
 
-async function convert(browser, file) {
+async function convert(browser, file, withPdf) {
   const src = path.join(DECKS_DIR, file);
   const dest = src.replace(/\.html$/i, ".pptx");
+  const pdfDest = src.replace(/\.html$/i, ".pdf");
+  const pdfPages = [];
   const page = await browser.newPage();
   await page.setViewport({ width: W, height: H, deviceScaleFactor: SCALE });
   await page.emulateMediaFeatures([{ name: "prefers-reduced-motion", value: "reduce" }]);
+  // PDF pages are printed with screen styles, so each page is exactly the state on screen (some decks
+  // have their own @media print layout that puts every slide on one long page)
+  await page.emulateMediaType("screen");
   await page.goto(pathToFileURL(src).href + "#1", { waitUntil: "load" });
   await page.addStyleTag({ content: "*,*::before,*::after{transition:none!important;animation:none!important}" });
   await page.evaluate(() => document.fonts.ready);
@@ -237,12 +249,32 @@ async function convert(browser, file) {
   pres.title = title;
   pres.subject = "Converted from " + file;
 
+  // Every slide plus each of its build steps (data-steps="N", or the highest data-step="k" inside it) is one
+  // state. Counting them from the markup is exact: some steps only change what is visible, not the text.
+  const states = await page.evaluate(() => [...document.querySelectorAll(".slide")].reduce((n, s) =>
+    n + 1 + (+(s.dataset.steps || 0) || Math.max(0, ...[...s.querySelectorAll("[data-step]")].map((e) => +e.dataset.step || 0)))
+      + Math.max(0, ((window.pptxSteps || {})[s.id] || []).length - 1), 0));
+  // extra static pages from the prep script: apply the next state of the active slide, if it has one left
+  const exportStep = () => page.evaluate(() => {
+    const id = document.querySelector(".slide.active")?.id, list = (window.pptxSteps || {})[id];
+    if (!list) return false;
+    const done = (window.__pptxDone ||= {});
+    const i = done[id] ?? -1;
+    if (i + 1 >= list.length) return false;
+    list[i + 1](); done[id] = i + 1;
+    return true;
+  });
   let prevSig = null;
   let count = 0;
-  for (let guard = 0; guard < 300; guard++) {
+  for (let guard = 0; guard < (states || 300); guard++) {
+    // decks without .slide sections: stop when the right arrow no longer changes anything
     const sig = await page.evaluate(() => location.hash + "|" + (document.querySelector(".slide.active")?.innerText ?? document.body.innerText));
-    if (sig === prevSig) break;
+    if (!states && sig === prevSig) break;
     prevSig = sig;
+    if (await page.evaluate(() => { const id = document.querySelector(".slide.active")?.id; return !!(window.pptxSteps || {})[id] && (window.__pptxDone || {})[id] === undefined; })) {
+      await exportStep();                                   // first visit of a slide with static pages: its state 0
+      await new Promise((r) => setTimeout(r, 150));
+    }
 
     const { blocks, ids } = await page.evaluate(extractAndHide);
     const fonts = await renderedFonts(cdp, ids);
@@ -252,22 +284,40 @@ async function convert(browser, file) {
     const slide = pres.addSlide();
     slide.background = { data: "image/jpeg;base64," + shot };
     addTextBlocks(slide, blocks, fonts);
+    const notes = await page.evaluate(() => document.querySelector(".slide.active aside.notes")?.textContent.replace(/\s+/g, " ").trim() || "");
+    if (notes) slide.addNotes(notes);
+    // the same state as one vector PDF page (text restored, so it is selectable)
+    if (withPdf) pdfPages.push(await page.pdf({ width: `${W}px`, height: `${H}px`, printBackground: true, pageRanges: "1",
+                                               margin: { top: 0, right: 0, bottom: 0, left: 0 } }));
     count++;
 
-    await page.keyboard.press("ArrowRight");
+    if (!(await exportStep())) await page.keyboard.press("ArrowRight");
     await new Promise((r) => setTimeout(r, 250));
   }
 
   await page.close();
   await pres.writeFile({ fileName: dest });
   console.log(`${file} → ${path.basename(dest)} (${count} slides)`);
+  if (withPdf) {
+    const out = await PDFDocument.create();
+    out.setTitle(title);
+    for (const buf of pdfPages) {
+      const one = await PDFDocument.load(buf);
+      const [pg] = await out.copyPages(one, [0]);
+      out.addPage(pg);
+    }
+    fs.writeFileSync(pdfDest, await out.save());
+    console.log(`${file} → ${path.basename(pdfDest)} (${pdfPages.length} pages)`);
+  }
 }
 
-const wanted = process.argv.slice(2);
+const args = process.argv.slice(2);
+const withPdf = !args.includes("--no-pdf");
+const wanted = args.filter((a) => !a.startsWith("--"));
 const files = wanted.length ? wanted.map((f) => path.basename(f)) : fs.readdirSync(DECKS_DIR).filter((f) => f.toLowerCase().endsWith(".html"));
 const browser = await puppeteer.launch({ executablePath: browserPath(), headless: true });
 try {
-  for (const f of files) await convert(browser, f);
+  for (const f of files) await convert(browser, f, withPdf);
 } finally {
   await browser.close();
 }

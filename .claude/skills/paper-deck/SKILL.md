@@ -19,15 +19,27 @@ The VPT deck (`public/decks/2026-10-vpt-visual-prompt-tuning.html`) is the refer
 - **Page numbers are automatic.** The navigation JS injects `.pgnum` into every slide except the title, computed from slide order. Never hard-code numbers. Keep the bottom-right corner (right 40px, bottom ~38px) free, and keep `.src` stopping at right:100px.
 - **Stepped slides:** `data-steps="N"` on the section, plus `hooks['<id>'] = step => draw(step)`. ArrowRight goes through the steps, then to the next slide; ArrowLeft goes back and arrives on the last step. A tab click must also set the global `step` (`step = +b.dataset.v`), so the arrow keys continue from there. Every tabbed explanatory slide works this way, because he presents every state.
 - **Measured numbers come from data, never typed in.** His own results live in `const RESULTS = …;`, written by `demo/vpt/fill_deck.py` from `demo/vpt/weights/*.json`. Render from it, and keep that marker line intact.
-- **PowerPoint export:**
-  - `npm run pptx` (`scripts/build-pptx.mjs`) steps through every slide in headless Chrome.
+- **Static versions (PDF and PowerPoint):**
+  - `npm run export` (`scripts/build-pptx.mjs`) writes `<deck>.pptx` and `<deck>.pdf` next to the HTML. It steps through every slide state in headless Chrome; the number of states is counted from `data-steps` / `data-step`.
+  - The PowerPoint gets a picture background with editable text boxes and the speaker notes. The PDF is vector, with selectable text, printed with screen styles.
   - `scripts/pptx-prep/<deck>.js` runs first, to freeze interactives. Update it when you change elements it queries.
-  - Exported text boxes include the page numbers.
+  - No control may look clickable in the static files (he flagged a leftover slider). Either replace it with one plain line saying what is shown ("Shown for 24 tasks on ViT-B"), or turn the logic into separate pages with `window.pptxSteps = { '<slide id>': [state0, state1, …] }` in the prep script. Each state is a function that sets the slide up; the export makes one page per state. The VPT storage slide (1 task, then 24, then 24 on ViT-H) and the demo slide (all images, then 1,000) are the examples.
+  - A live demo can't run from disk. Record one real run into the prep script (see `scripts/pptx-prep/2026-10-vpt-snapshot-demo.mjs`) and re-record it when the demo changes.
+  - Re-run the export after every change to a deck that is meant for publishing; the index offers the files for download.
+- **Original paper:** `<meta name="paper" content="https://arxiv.org/pdf/<id>">` in the deck's `<head>`. The index and the viewer bar link to it (link to arXiv rather than hosting the PDF).
+- **Index entry:** also add `<meta name="citation" content="Hu et al., ICLR 2022">` and `<meta name="summary" content="…">` (one or two plain sentences on what the paper does), then run `npm run thumbs` so the index shows the title slide and the viewer's slide list shows every slide (`public/decks/thumbs/<deck>/`, matched by slide id). Re-run it whenever slides change; a slide without a picture shows its title instead.
+- **Slide list navigation:** the viewer jumps to a slide by replacing the deck's address with `#<n>`, so every deck must follow `hashchange` (the `fromHash` listener at the end of the navigation script) and keep `.slide.active` on the current slide.
 - **Live demo:**
   - The models run in the browser with onnxruntime-web. Files come from the free Hugging Face model repo `valinor61/vpt-medmnist`; override with `?models=<url>/`, or use a Gradio fallback with `?demo=<url>`.
   - `next.config.mjs` sets COOP/COEP (credentialless) so threads work.
   - Exports come from `demo/vpt/export_onnx.py` (`--regimes full,1k`) using `demo/vpt/.venv`; uploads go through `upload_models.py`.
   - Uploading to Hugging Face publishes files, so ask first.
+  - The LoRA deck has the same demo slide (`s-demo`), built from `demo/lora/` and the HF repo `valinor61/lora-medmnist`. Its graph `lora_encoder.fp16.onnx` takes the LoRA pairs as inputs, and zero pairs give the linear probe. Linear probe and full fine-tuning are the VPT runs: `heads.json` points at the full models in `valinor61/vpt-medmnist`, so they are never uploaded twice. The next PEFT method should follow the same pattern: new method folder, shared baselines. The browser graph `peft_encoder.fp16.onnx` takes VPT prompts *and* LoRA pairs, so one base model runs linear probe, VPT and LoRA.
+  - **Combined talk:** `public/decks/2026-10-peft-vpt-lora.html` (VPT paper part, LoRA paper part, joint experiments, 4-column demo) is assembled by `python scripts/merge-peft-deck.py` from the two decks.
+    - The assembly prefixes LoRA slide ids that clash (`s-lora-method` …) and scopes global CSS per part with `[data-part]`.
+    - It applies `data-merged-text` attributes and sets `<html data-merged>`.
+    - It refuses to overwrite without `--force`: once he revises the combined deck directly, that file is the source of truth, so don't re-run with `--force` over his edits.
+    - The experiments slides (`s-exp*`) live in the LoRA deck and render four methods from `RESULTS`. `demo/lora/fill_deck.py` fills both decks.
 
 ## 2. Look: academic print
 

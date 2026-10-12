@@ -1,0 +1,41 @@
+{
+  "task": "pneumoniamnist",
+  "method": "lora-r8_full",
+  "classes": [
+    "normal",
+    "pneumonia"
+  ],
+  "backbone_id": "vit_base_patch16_224.orig_in21k",
+  "rank": 8,
+  "alpha": 8,
+  "targets": [
+    "query",
+    "value"
+  ],
+  "dropout": 0.1,
+  "train_images": 4708,
+  "base_lr": 0.004,
+  "epochs": 20,
+  "select": "bal_acc",
+  "val": {
+    "acc": 99.24,
+    "bal_acc": 99.24,
+    "auc": 99.97
+  },
+  "test": {
+    "acc": 94.55,
+    "bal_acc": 93.08,
+    "auc": 99.33
+  },
+  "train_minutes": 6.0,
+  "backbone": 85798656,
+  "lora": 294912,
+  "head": 1538,
+  "trainable": 296450,
+  "trainable_pct": 0.34551823282639765,
+  "test_merged": {
+    "acc": 94.55,
+    "bal_acc": 93.08,
+    "auc": 99.33
+  }
+}

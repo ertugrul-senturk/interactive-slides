@@ -1,0 +1,5 @@
+logs/
+logs_queue.txt
+__pycache__/
+web/*.onnx
+web/notebook_check/

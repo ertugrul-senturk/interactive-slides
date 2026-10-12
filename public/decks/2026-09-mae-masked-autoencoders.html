@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Masked Autoencoders Are Scalable Vision Learners</title>
+<meta name="paper" content="https://arxiv.org/pdf/2111.06377">
+<meta name="citation" content="He et al., CVPR 2022">
+<meta name="summary" content="Hide three quarters of an image and train a vision transformer to paint the missing patches back. What the encoder learns along the way transfers well to other tasks.">
 <style>
 :root{
   --ink:#1B2733;
@@ -768,7 +771,8 @@ lineChart(document.getElementById('pftchart'),{w:560,h:170,xmin:-0.3,xmax:7.3,ym
  series:[{name:'MAE',color:'#177E7E',pts:BL.map((b,i)=>({x:i,y:MAE[i]})),label:'MAE',dx:10,dy:-6},{name:'contrastive',color:'#66707A',dash:'4 4',pts:BL.map((b,i)=>({x:i,y:MOCO[i]})),label:'contrastive',dx:10,dy:14,r:4}]});
 
 /* ---------- start ---------- */
-const h=parseInt(location.hash.slice(1));show(isNaN(h)?0:h-1);
+const fromHash=()=>{const h=parseInt(location.hash.slice(1));return isNaN(h)?0:h-1;};show(fromHash());
+addEventListener('hashchange',()=>{if(fromHash()!==cur)show(fromHash());});
 })();
 </script>
 

@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { getDecks } from "@/lib/decks";
 import Viewer from "./viewer";
 
+const mb = (kb: number) => `${(kb / 1024).toFixed(1)} MB`;
+
 export const dynamic = "force-static";
 export const dynamicParams = false;
 
@@ -22,19 +24,18 @@ export default async function ViewPage({ params }: { params: Promise<{ file: str
   const deck = getDecks().find((d) => d.file === name);
   if (!deck) notFound();
   return (
-    <div className="viewer">
-      <header className="bar">
-        <Link href="/" className="back">← All slides</Link>
-        <span className="bartitle">{deck.title}</span>
-        <span className="baractions">
-          <a href={deck.href} target="_blank" rel="noopener">Open file</a>
-          {deck.pptx && (
-            <a className="dl" href={deck.pptx.href} download title={`PowerPoint, ${deck.pptx.sizeKB} KB`}>Download .pptx</a>
-          )}
-          <Viewer />
-        </span>
-      </header>
-      <iframe id="deck" className="frame" src={deck.href} title={deck.title} allowFullScreen />
-    </div>
+    <Viewer href={deck.href} title={deck.title} slides={deck.slides}>
+      <Link href="/" className="home" title="All talks">Paper slides</Link>
+      <span className="barsep" aria-hidden="true" />
+      <span className="bartitle">
+        {deck.title}
+        {deck.citation && <span className="barcite">{deck.citation}</span>}
+      </span>
+      <nav className="baractions">
+        {deck.paper && <a href={deck.paper} target="_blank" rel="noopener" title="The original paper (PDF)">Paper</a>}
+        {deck.pdf && <a className="dl" href={deck.pdf.href} download title={`Static version as PDF, ${mb(deck.pdf.sizeKB)}`}>PDF</a>}
+        {deck.pptx && <a className="dl" href={deck.pptx.href} download title={`Static version as PowerPoint, ${mb(deck.pptx.sizeKB)}`}>PowerPoint</a>}
+      </nav>
+    </Viewer>
   );
 }

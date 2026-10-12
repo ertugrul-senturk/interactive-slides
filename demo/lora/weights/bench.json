@@ -1,0 +1,28 @@
+{
+  "gpu": "NVIDIA GeForce RTX 5070 Ti Laptop GPU",
+  "train_batch": 32,
+  "cpu_threads": 2,
+  "linear": {
+    "train_ms_per_img": 1.08,
+    "train_peak_gb": 0.5,
+    "cpu_ms_per_img": 195
+  },
+  "vpt": {
+    "train_ms_per_img": 3.58,
+    "train_peak_gb": 2.28,
+    "cpu_ms_per_img": 250
+  },
+  "lora": {
+    "train_ms_per_img": 3.37,
+    "train_peak_gb": 2.11,
+    "cpu_ms_per_img": 190
+  },
+  "full": {
+    "train_ms_per_img": 4.25,
+    "train_peak_gb": 3.49,
+    "cpu_ms_per_img": 189
+  },
+  "lora_merged": {
+    "cpu_ms_per_img": 188
+  }
+}

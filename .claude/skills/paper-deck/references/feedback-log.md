@@ -44,6 +44,13 @@ These are concrete verdicts from reviewing the VPT deck (October 2026), grouped 
 - **Redundant slides.** Two live demo slides ("second slide is redundant") were merged into one. The questions slide and the backup "all my numbers" table were removed.
 - **Live demo.** He wanted the 1,000-image models next to the full-data models. A toggle switches all three methods. Switching swaps a 1.8 MB prompt file for VPT but needs another 172 MB model for full fine-tuning, which is a talking point.
 
+- **Layout jumping between steps.** On the LoRA low-rank slide, the per-rank note was one line on some steps and two on others, so the B × A drawing under it moved up and down: "not good". Text that changes per step gets a fixed height for its longest version (`min-height` in em), so nothing below it moves.
+- **Same picture twice.** Once the low-rank slide had its photo = B × A drawing, the next slide (ΔW = B A drawn to scale, with its own rank toggle) "explains the same thing". It was deleted; its unique points moved to the low-rank slide's notes and source line and to the method slide. Before adding a visual, check that no neighbouring slide already draws the same shape.
+- **Matrix shapes.** The rank-r cat photos alone did not show "the matrix representation". A small to-scale drawing (photo = tall B × wide A) that follows the rank tabs was added under the text.
+
+## Static exports (PDF and PowerPoint)
+- **Leftover controls.** The storage slider and model-size buttons survived into the PDF/PowerPoint frozen at one value: "these are not interactive, so use some static value or create separate slides based on the logic". The slide now becomes three pages following the talk, each with a plain "Shown for …" line. The demo shows two recorded runs (all images, then 1,000) with a plain line instead of tabs and thumbnails.
+
 ## Accepted and praised
 - The interactive storage slider ("tasks" and "model size" changing copies against one shared model).
 - The source-line style.

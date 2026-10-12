@@ -1,0 +1,202 @@
+[
+ {
+  "id": "s-title",
+  "file": "s-title.jpg"
+ },
+ {
+  "id": "s-pretrain",
+  "file": "s-pretrain.jpg"
+ },
+ {
+  "id": "s-storage",
+  "file": "s-storage.jpg"
+ },
+ {
+  "id": "s-protocols",
+  "file": "s-protocols.jpg"
+ },
+ {
+  "id": "s-history",
+  "file": "s-history.jpg"
+ },
+ {
+  "id": "s-vit",
+  "file": "s-vit.jpg"
+ },
+ {
+  "id": "s-sidebyside",
+  "file": "s-sidebyside.jpg"
+ },
+ {
+  "id": "s-method",
+  "file": "s-method.jpg"
+ },
+ {
+  "id": "s-why",
+  "file": "s-why.jpg"
+ },
+ {
+  "id": "s-calc",
+  "file": "s-calc.jpg"
+ },
+ {
+  "id": "s-recipe",
+  "file": "s-recipe.jpg"
+ },
+ {
+  "id": "s-bench",
+  "file": "s-bench.jpg"
+ },
+ {
+  "id": "s-main",
+  "file": "s-main.jpg"
+ },
+ {
+  "id": "s-data",
+  "file": "s-data.jpg"
+ },
+ {
+  "id": "s-scale",
+  "file": "s-scale.jpg"
+ },
+ {
+  "id": "s-location",
+  "file": "s-location.jpg"
+ },
+ {
+  "id": "s-length",
+  "file": "s-length.jpg"
+ },
+ {
+  "id": "s-features",
+  "file": "s-features.jpg"
+ },
+ {
+  "id": "s-limits",
+  "file": "s-limits.jpg"
+ },
+ {
+  "id": "s-cost",
+  "file": "s-cost.jpg"
+ },
+ {
+  "id": "s-lora-title",
+  "file": "s-lora-title.jpg"
+ },
+ {
+  "id": "s-recap",
+  "file": "s-recap.jpg"
+ },
+ {
+  "id": "s-copies",
+  "file": "s-copies.jpg"
+ },
+ {
+  "id": "s-before",
+  "file": "s-before.jpg"
+ },
+ {
+  "id": "s-lowrank",
+  "file": "s-lowrank.jpg"
+ },
+ {
+  "id": "s-lora-method",
+  "file": "s-lora-method.jpg"
+ },
+ {
+  "id": "s-tiny",
+  "file": "s-tiny.jpg"
+ },
+ {
+  "id": "s-where",
+  "file": "s-where.jpg"
+ },
+ {
+  "id": "s-vs",
+  "file": "s-vs.jpg"
+ },
+ {
+  "id": "s-lora-calc",
+  "file": "s-lora-calc.jpg"
+ },
+ {
+  "id": "s-width",
+  "file": "s-width.jpg"
+ },
+ {
+  "id": "s-code",
+  "file": "s-code.jpg"
+ },
+ {
+  "id": "s-lang",
+  "file": "s-lang.jpg"
+ },
+ {
+  "id": "s-sweep",
+  "file": "s-sweep.jpg"
+ },
+ {
+  "id": "s-which",
+  "file": "s-which.jpg"
+ },
+ {
+  "id": "s-rank",
+  "file": "s-rank.jpg"
+ },
+ {
+  "id": "s-subspace",
+  "file": "s-subspace.jpg"
+ },
+ {
+  "id": "s-part",
+  "file": "s-part.jpg"
+ },
+ {
+  "id": "s-vtab",
+  "file": "s-vtab.jpg"
+ },
+ {
+  "id": "s-pertask",
+  "file": "s-pertask.jpg"
+ },
+ {
+  "id": "s-medical",
+  "file": "s-medical.jpg"
+ },
+ {
+  "id": "s-lora-limits",
+  "file": "s-lora-limits.jpg"
+ },
+ {
+  "id": "s-exp",
+  "file": "s-exp.jpg"
+ },
+ {
+  "id": "s-exp-setup",
+  "file": "s-exp-setup.jpg"
+ },
+ {
+  "id": "s-exp-results",
+  "file": "s-exp-results.jpg"
+ },
+ {
+  "id": "s-exp-cost",
+  "file": "s-exp-cost.jpg"
+ },
+ {
+  "id": "s-demo",
+  "file": "s-demo.jpg"
+ },
+ {
+  "id": "s-take",
+  "file": "s-take.jpg"
+ },
+ {
+  "id": "s-refs",
+  "file": "s-refs.jpg"
+ },
+ {
+  "id": "s-refs-2",
+  "file": "s-refs-2.jpg"
+ }
+]
