@@ -761,6 +761,11 @@ def build(force):
     head = vpt.text[:vpt.text.index("<style>")]
     head = head.replace('<html lang="en">', '<html lang="en" data-merged>', 1)
     head = re.sub(r"<title>.*?</title>", "<title>VPT and LoRA</title>", head)
+    # both papers, each with its own link in the index and the viewer bar (lib/decks.ts reads every <meta name="paper">)
+    vpt_paper = re.search(r'<meta name="paper" content="([^"]+)"', vpt.text).group(1)
+    lora_paper = re.search(r'<meta name="paper" content="([^"]+)"', lora.text).group(1)
+    head = re.sub(r'<meta name="paper" content="[^"]*">',
+                  f'<meta name="paper" content="{vpt_paper}" data-label="VPT paper">\n<meta name="paper" content="{lora_paper}" data-label="LoRA paper">', head, count=1)
     head = re.sub(r'<meta name="citation" content="[^"]*">', '<meta name="citation" content="Jia et al., ECCV 2022 · Hu et al., ICLR 2022">', head)
     head = re.sub(r'<meta name="summary" content="[^"]*">',
                   '<meta name="summary" content="Two ways to adapt a frozen vision transformer to a new task, learned input vectors and a small low-rank change to the weights, with my own runs of both on three medical image sets and a live demo.">', head)

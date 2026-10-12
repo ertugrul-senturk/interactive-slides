@@ -32,7 +32,7 @@ export default async function ViewPage({ params }: { params: Promise<{ file: str
         {deck.citation && <span className="barcite">{deck.citation}</span>}
       </span>
       <nav className="baractions">
-        {deck.paper && <a href={deck.paper} target="_blank" rel="noopener" title="The original paper (PDF)">Paper</a>}
+        {deck.papers.map((p) => <a key={p.href} href={p.href} target="_blank" rel="noopener" title="The original paper (PDF)">{p.label}</a>)}
         {deck.pdf && <a className="dl" href={deck.pdf.href} download title={`Static version as PDF, ${mb(deck.pdf.sizeKB)}`}>PDF</a>}
         {deck.pptx && <a className="dl" href={deck.pptx.href} download title={`Static version as PowerPoint, ${mb(deck.pptx.sizeKB)}`}>PowerPoint</a>}
       </nav>

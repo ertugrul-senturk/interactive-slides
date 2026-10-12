@@ -9,11 +9,18 @@ export type Deck = {
   sizeKB: number;
   pptx: { href: string; sizeKB: number } | null; // PowerPoint version with the same name, if present
   pdf: { href: string; sizeKB: number } | null;  // PDF version with the same name, if present
-  paper: string | null;                          // the original paper, from <meta name="paper" content="…">
+  papers: Paper[];                               // the original paper(s), from <meta name="paper" content="…" data-label="…">, in order
   citation: string | null;                       // short reference such as "Jia et al., ECCV 2022", from <meta name="citation">
   summary: string | null;                        // one or two sentences for the index, from <meta name="summary">
   thumb: string | null;                          // picture of the title slide, written by npm run thumbs
   slides: Slide[];                               // every slide in order, for the viewer's slide list
+};
+
+// A deck about one paper shows a single "Paper" link; a deck about several (the combined VPT + LoRA talk) gives each
+// <meta name="paper"> a data-label such as "VPT paper", and every paper gets its own link.
+export type Paper = {
+  href: string;
+  label: string;         // data-label, or "Paper"
 };
 
 export type Slide = {
@@ -36,6 +43,14 @@ function dateFrom(file: string): string | null {
 function metaFrom(html: string, name: string): string | null {
   const m = html.match(new RegExp(`<meta\\s+name=["']${name}["']\\s+content=["']([^"']+)["']`, "i"));
   return m ? m[1] : null;
+}
+
+function papersFrom(html: string): Paper[] {
+  return [...html.matchAll(/<meta\s+name=["']paper["'][^>]*>/gi)].flatMap(([tag]) => {
+    const href = tag.match(/\scontent=["']([^"']+)["']/i)?.[1];
+    const label = tag.match(/\sdata-label=["']([^"']+)["']/i)?.[1];
+    return href ? [{ href, label: label ?? "Paper" }] : [];
+  });
 }
 
 function decode(text: string): string {
@@ -101,7 +116,7 @@ export function getDecks(): Deck[] {
         sizeKB: Math.round(stat.size / 1024),
         pptx: sibling(file, ".pptx"),
         pdf: sibling(file, ".pdf"),
-        paper: metaFrom(html, "paper"),
+        papers: papersFrom(html),
         citation: metaFrom(html, "citation"),
         summary: metaFrom(html, "summary"),
         thumb: sibling(file, ".jpg")?.href ?? null,

@@ -52,7 +52,7 @@ export default function Home() {
                     {d.summary && <p className="summary">{d.summary}</p>}
                     <p className="links">
                       <Link className="open" href={view}>Open the slides</Link>
-                      {d.paper && <a href={d.paper} target="_blank" rel="noopener" title="The original paper (PDF)">Paper</a>}
+                      {d.papers.map((p) => <a key={p.href} href={p.href} target="_blank" rel="noopener" title="The original paper (PDF)">{p.label}</a>)}
                       {d.pdf && <a href={d.pdf.href} download title={`Static version as PDF, ${mb(d.pdf.sizeKB)}`}>PDF</a>}
                       {d.pptx && <a href={d.pptx.href} download title={`Static version as PowerPoint, ${mb(d.pptx.sizeKB)}`}>PowerPoint</a>}
                     </p>
