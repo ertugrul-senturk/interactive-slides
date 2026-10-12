@@ -54,6 +54,7 @@
         `${taskName}, one test image, models trained on <b>${RN[regime]}</b>.</p>`;
       d.querySelector(".regime").style.visibility = "hidden";
       d.querySelector("#thumbs")?.remove();
+      d.querySelector("#drop")?.classList.add("static");   // no "choose your own image" badge in a static file
     };
     window.pptxSteps = Object.assign(window.pptxSteps || {}, { "s-demo": DEMO.map(snap => () => show(snap)) });
     show(DEMO[0]);
