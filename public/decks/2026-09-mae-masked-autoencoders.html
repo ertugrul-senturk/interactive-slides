@@ -589,6 +589,18 @@ addEventListener('keydown',e=>{
   else if(e.key==='f'||e.key==='F'){document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();}
 });
 /* slides change only with the keyboard (arrows, space, PageUp/PageDown); clicks are left to the interactive elements */
+// Phones and tablets have no arrow keys: a horizontal swipe steps like ArrowRight / ArrowLeft.
+// Taps stay with the interactive elements; a swipe that starts on a slider moves the slider,
+// and a pinch or a swipe while zoomed in is left to the browser.
+let touch = null;
+addEventListener('touchstart', e => { touch = e.touches.length === 1 && !(e.target.closest && e.target.closest('input[type=range]')) ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null; }, { passive: true });
+addEventListener('touchcancel', () => { touch = null; });
+addEventListener('touchend', e => {
+  if (!touch || e.touches.length) return;
+  const c = e.changedTouches[0], dx = c.clientX - touch.x, dy = c.clientY - touch.y; touch = null;
+  if (Math.abs(dx) < 40 || Math.abs(dx) < 1.5 * Math.abs(dy) || (window.visualViewport && visualViewport.scale > 1.05)) return;
+  dx < 0 ? next() : prev();
+}, { passive: true });
 
 /* ---------- slide 2 visuals ---------- */
 (function(){const d=document.getElementById('dots');for(let i=0;i<235;i++){const s=document.createElement('i');if(i===0)s.className='in';d.appendChild(s);}

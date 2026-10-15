@@ -1827,6 +1827,18 @@ addEventListener('keydown', e => {
   else if (k === 'f' || k === 'F'){ document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.(); }
   else if (k === 'n' || k === 'N') openNotes();
 });
+// Phones and tablets have no arrow keys: a horizontal swipe steps like ArrowRight / ArrowLeft.
+// Taps stay with the interactive elements; a swipe that starts on a slider moves the slider,
+// and a pinch or a swipe while zoomed in is left to the browser.
+let touch = null;
+addEventListener('touchstart', e => { touch = e.touches.length === 1 && !(e.target.closest && e.target.closest('input[type=range]')) ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null; }, { passive: true });
+addEventListener('touchcancel', () => { touch = null; });
+addEventListener('touchend', e => {
+  if (!touch || e.touches.length) return;
+  const c = e.changedTouches[0], dx = c.clientX - touch.x, dy = c.clientY - touch.y; touch = null;
+  if (Math.abs(dx) < 40 || Math.abs(dx) < 1.5 * Math.abs(dy) || (window.visualViewport && visualViewport.scale > 1.05)) return;
+  dx < 0 ? next() : prev();
+}, { passive: true });
 // segmented controls: one helper for all of them
 function segment(sel, fn){ const host = $(sel); if (!host) return; host.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; $$('button', host).forEach(x => x.setAttribute('aria-pressed', String(x === b))); fn(b.dataset, b); }); }
 
