@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Globe, live</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+  :root{ --ink:#1B1E22; --ink-3:#777E86; }
+  html,body{margin:0;height:100%;background:#fff;color:var(--ink);font-family:"Source Sans 3","Segoe UI",Arial,sans-serif;overflow:hidden}
+  canvas{position:fixed;inset:0;width:100vw;height:100vh;display:block;cursor:grab}
+  canvas:active{cursor:grabbing}
+  .hint,.fps,.load{position:fixed;font-size:15px;color:var(--ink-3);pointer-events:none;-webkit-user-select:none;user-select:none}
+  .hint{left:20px;bottom:16px}
+  .fps{right:20px;bottom:16px;font-variant-numeric:tabular-nums}
+  .load{left:50%;top:50%;transform:translate(-50%,-50%);font-size:18px}
+</style>
+</head>
+<body>
+<canvas id="cv" aria-label="The globe as 3D Gaussians, rendered live; drag to turn it, scroll to zoom."></canvas>
+<div class="load" id="load">Loading the Gaussians…</div>
+<div class="hint">Drag to turn, scroll to zoom, double-click to reset. Space stops the turning.</div>
+<div class="fps" id="fps"></div>
+<script type="module">
+import { createSplatViewer } from './gs/splat-viewer.js';
+const load = document.getElementById('load'), fpsEl = document.getElementById('fps');
+try {
+  const v = await createSplatViewer(document.getElementById('cv'), {
+    url: 'gs/globe-gaussians', distance: 2.45, target: [0, 0, -0.01],
+    onProgress: p => { load.textContent = `Loading the Gaussians… ${Math.round(p * 100)}%`; },
+    onFps: f => { fpsEl.textContent = `${v.count.toLocaleString('en-US')} Gaussians, ${Math.round(f)} frames per second` + (ms ? `, ${ms.toFixed(1)} ms to draw one` : ''); },
+  });
+  let ms = null;
+  load.remove();
+  v.start();
+  setTimeout(() => { if (v.ready) ms = v.benchmark(); }, 1500);
+  let auto = true;
+  addEventListener('keydown', e => { if (e.key === ' '){ e.preventDefault(); auto = !auto; v.setAutoRotate(auto); } });
+  window.splatViewer = v;
+} catch (e) { load.textContent = 'This page needs WebGL2: ' + e.message; }
+</script>
+</body>
+</html>

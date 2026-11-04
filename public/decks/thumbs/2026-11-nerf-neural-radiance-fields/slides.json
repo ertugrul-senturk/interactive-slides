@@ -1,0 +1,186 @@
+[
+ {
+  "id": "s-title",
+  "file": "s-title.jpg"
+ },
+ {
+  "id": "s-task",
+  "file": "s-task.jpg"
+ },
+ {
+  "id": "s-grid",
+  "file": "s-grid.jpg"
+ },
+ {
+  "id": "s-field",
+  "file": "s-field.jpg"
+ },
+ {
+  "id": "s-render",
+  "file": "s-render.jpg"
+ },
+ {
+  "id": "s-train",
+  "file": "s-train.jpg"
+ },
+ {
+  "id": "s-net",
+  "file": "s-net.jpg"
+ },
+ {
+  "id": "s-view",
+  "file": "s-view.jpg"
+ },
+ {
+  "id": "s-pe",
+  "file": "s-pe.jpg"
+ },
+ {
+  "id": "s-fig4",
+  "file": "s-fig4.jpg"
+ },
+ {
+  "id": "s-hier",
+  "file": "s-hier.jpg"
+ },
+ {
+  "id": "s-recipe",
+  "file": "s-recipe.jpg"
+ },
+ {
+  "id": "s-bench",
+  "file": "s-bench.jpg"
+ },
+ {
+  "id": "s-psnr",
+  "file": "s-psnr.jpg"
+ },
+ {
+  "id": "s-main",
+  "file": "s-main.jpg"
+ },
+ {
+  "id": "s-compare",
+  "file": "s-compare.jpg"
+ },
+ {
+  "id": "s-ablation",
+  "file": "s-ablation.jpg"
+ },
+ {
+  "id": "s-cost",
+  "file": "s-cost.jpg"
+ },
+ {
+  "id": "s-after",
+  "file": "s-after.jpg"
+ },
+ {
+  "id": "s-ngp",
+  "file": "s-ngp.jpg"
+ },
+ {
+  "id": "s-ngp-levels",
+  "file": "s-ngp-levels.jpg"
+ },
+ {
+  "id": "s-ngp-hash",
+  "file": "s-ngp-hash.jpg"
+ },
+ {
+  "id": "s-ngp-speed",
+  "file": "s-ngp-speed.jpg"
+ },
+ {
+  "id": "s-ngp-results",
+  "file": "s-ngp-results.jpg"
+ },
+ {
+  "id": "s-ngp-why",
+  "file": "s-ngp-why.jpg"
+ },
+ {
+  "id": "s-gs",
+  "file": "s-gs.jpg"
+ },
+ {
+  "id": "s-gs-one",
+  "file": "s-gs-one.jpg"
+ },
+ {
+  "id": "s-gs-render",
+  "file": "s-gs-render.jpg"
+ },
+ {
+  "id": "s-gs-train",
+  "file": "s-gs-train.jpg"
+ },
+ {
+  "id": "s-gs-results",
+  "file": "s-gs-results.jpg"
+ },
+ {
+  "id": "s-gs-compare",
+  "file": "s-gs-compare.jpg"
+ },
+ {
+  "id": "s-gs-cost",
+  "file": "s-gs-cost.jpg"
+ },
+ {
+  "id": "s-three",
+  "file": "s-three.jpg"
+ },
+ {
+  "id": "s-limits",
+  "file": "s-limits.jpg"
+ },
+ {
+  "id": "s-part2",
+  "file": "s-part2.jpg"
+ },
+ {
+  "id": "s-capture",
+  "file": "s-capture.jpg"
+ },
+ {
+  "id": "s-points",
+  "file": "s-points.jpg"
+ },
+ {
+  "id": "s-mask",
+  "file": "s-mask.jpg"
+ },
+ {
+  "id": "s-gtrain",
+  "file": "s-gtrain.jpg"
+ },
+ {
+  "id": "s-orbit",
+  "file": "s-orbit.jpg"
+ },
+ {
+  "id": "s-gres",
+  "file": "s-gres.jpg"
+ },
+ {
+  "id": "s-gcmp",
+  "file": "s-gcmp.jpg"
+ },
+ {
+  "id": "s-live",
+  "file": "s-live.jpg"
+ },
+ {
+  "id": "s-room",
+  "file": "s-room.jpg"
+ },
+ {
+  "id": "s-take",
+  "file": "s-take.jpg"
+ },
+ {
+  "id": "s-refs",
+  "file": "s-refs.jpg"
+ }
+]
