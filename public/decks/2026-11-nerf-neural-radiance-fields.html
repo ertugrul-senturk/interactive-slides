@@ -575,7 +575,7 @@ pre.code .c{color:var(--ink-3)}
     With Instant-NGP (Müller et al., SIGGRAPH 2022) and 3D Gaussian splatting (Kerbl et al., SIGGRAPH 2023).
   </div>
   <div class="me">Presented by <b>Ertugrul Senturk</b><br>November 2026</div>
-  <aside class="notes">The paper is "NeRF: Representing Scenes as Neural Radiance Fields for View Synthesis", ECCV 2020; the first three authors contributed equally. The picture is the whole idea: the blue cameras are photos we have, with their positions known; the red camera is a viewpoint nobody photographed, and NeRF renders what it would see. The scene itself is stored as the weights of a small network. The second part covers the two papers that made this fast, Instant-NGP and 3D Gaussian splatting, and at the end I show my own capture of a real object, which is what I am training on. About forty minutes; please interrupt.</aside>
+  <aside class="notes">The paper is "NeRF: Representing Scenes as Neural Radiance Fields for View Synthesis", ECCV 2020; the first three authors contributed equally. The picture is the whole idea: the blue cameras are photos we have, with their positions known; the red camera is a viewpoint nobody photographed, and NeRF renders what it would see. As in the paper's synthetic scenes, the photos come from the half-sphere above the object, and the new view lies between them: NeRF fills in views between its photos, it cannot invent a side it never saw. The bulldozer is a NeRF render from the paper; the cameras are my drawing. The scene itself is stored as the weights of a small network. The second part covers the two papers that made this fast, Instant-NGP and 3D Gaussian splatting, and at the end I show my own capture of a real object, which is what I am training on. About forty minutes; please interrupt.</aside>
 </section>
 
 <!-- ============================================================ the task -->
@@ -1600,24 +1600,35 @@ setInterval(() => { if (notesWin && !notesWin.closed && t0){ const s = Math.floo
 /* ---------------- title illustration: photos we have (blue cameras), a view nobody took (red) ---------------- */
 (function(){
   const host = $('#title-fig'); if (!host) return;
-  const W = 500, H = 470, cx = 250, cy = 250;
-  const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'A Lego bulldozer rendered by NeRF, surrounded by blue cameras that took the input photos, and one red camera at a new viewpoint.' });
-  const F = css('--frozen'), T = css('--tuned');
-  const im = el('image', { href: ASSETS + 'paper/lego-nerf.jpg', x: cx - 150, y: cy - 150, width: 300, height: 300 }); im.style.mixBlendMode = 'multiply'; svg.append(im);
-  // a camera: a small body and a frustum pointing at the center
-  function cam(a, col, dashed){
-    const R = 222, x = cx + R * Math.cos(a), y = cy + 0.86 * R * Math.sin(a);
-    const ang = Math.atan2(cy - y, cx - x) * 180 / Math.PI;
-    const g = el('g', { transform: `translate(${x} ${y}) rotate(${ang})` });
-    g.append(el('rect', { x: -15, y: -10, width: 18, height: 20, rx: 2, fill: col }));
-    g.append(el('path', { d: 'M3 -5 L19 -13 L19 13 L3 5 Z', fill: col }));
-    if (dashed) g.append(el('line', { x1: 22, y1: 0, x2: 0.86 * R - 70, y2: 0, stroke: col, 'stroke-width': 1.6, 'stroke-dasharray': '5 5' }));
-    svg.append(g);
+  // The cameras sit on the half-sphere above the scene, as in the paper's synthetic scenes, seen slightly from above.
+  // The new view (red) lies between input cameras, which is where NeRF renders well.
+  const W = 500, H = 470, cx = 250, cg = 290, R = 220;
+  const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'The Lego bulldozer as rendered by NeRF, with blue camera frustums on the half-sphere above it for the input photos and one red camera between them for a new view.' });
+  const F = css('--frozen'), T = css('--tuned'), INK3 = css('--ink-3');
+  const P = (az, el_) => { const a = az * Math.PI / 180, e = el_ * Math.PI / 180, X = R * Math.cos(e) * Math.cos(a), Y = R * Math.cos(e) * Math.sin(a), Z = R * Math.sin(e); return { x: cx + X, y: cg + 0.42 * Y - 0.72 * Z, front: Y > 0 }; };
+  const AIM = { x: cx, y: cg - 40 };
+  // the half-sphere: its outline and the ring on the ground
+  svg.append(el('path', { d: `M${cx - R} ${cg} A${R} ${R * 0.834} 0 0 1 ${cx + R} ${cg}`, fill: 'none', stroke: css('--rule'), 'stroke-dasharray': '4 5' }));
+  svg.append(el('ellipse', { cx, cy: cg, rx: R, ry: R * 0.42, fill: 'none', stroke: css('--rule'), 'stroke-dasharray': '4 5' }));
+  // a camera as a frustum: its center, and the image plane facing the scene
+  function cam(p, col, op){
+    const dx = AIM.x - p.x, dy = AIM.y - p.y, n = Math.hypot(dx, dy), ux = dx / n, uy = dy / n, bx = p.x + 26 * ux, by = p.y + 26 * uy;
+    svg.append(el('path', { d: `M${p.x} ${p.y} L${bx - 12 * uy} ${by + 12 * ux} L${bx + 12 * uy} ${by - 12 * ux} Z`, fill: col, 'fill-opacity': .22 * op, stroke: col, 'stroke-opacity': op, 'stroke-width': 1.6, 'stroke-linejoin': 'round' }));
+    svg.append(el('line', { x1: bx - 12 * uy, y1: by + 12 * ux, x2: bx + 12 * uy, y2: by - 12 * ux, stroke: col, 'stroke-opacity': op, 'stroke-width': 3.2, 'stroke-linecap': 'round' }));
+    svg.append(el('circle', { cx: p.x, cy: p.y, r: 2.6, fill: col, 'fill-opacity': op }));
   }
-  [-2.6, -2.15, -1.7, -1.25, -0.8, -0.35, 0.1, 2.55, 3.05].forEach(a => cam(a, F));
-  cam(1.05, T, true);
-  svg.append(el('text', { x: 312, y: 468, 'text-anchor': 'middle', style: `font-size:16px;font-weight:600;fill:${T}` }, 'a view nobody took'));
-  svg.append(el('text', { x: 250, y: 12, 'text-anchor': 'middle', style: `font-size:16px;font-weight:600;fill:${F}` }, 'photos we have'));
+  const BLUE = [[0, 10], [40, 12], [140, 12], [150, 25], [180, 12], [220, 14], [270, 14], [270, 48], [300, 40], [200, 72]].map(([a, e]) => P(a, e))
+    .filter(p => !(p.front && Math.abs(p.x - cx) < 120 && p.y > cg - 130 && p.y < cg + 25));
+  const NEW = P(12, 32);
+  BLUE.filter(p => !p.front).forEach(p => cam(p, F, .6));
+  const im = el('image', { href: ASSETS + 'paper/lego-nerf.jpg', x: cx - 120, y: cg - 172, width: 240, height: 240 }); im.style.mixBlendMode = 'multiply'; svg.append(im);
+  BLUE.filter(p => p.front).forEach(p => cam(p, F, 1));
+  svg.append(el('line', { x1: NEW.x, y1: NEW.y, x2: AIM.x + 0.35 * (NEW.x - AIM.x), y2: AIM.y + 0.35 * (NEW.y - AIM.y), stroke: T, 'stroke-width': 1.6, 'stroke-dasharray': '5 5' }));
+  cam(NEW, T, 1);
+  svg.append(el('text', { x: cx, y: 40, 'text-anchor': 'middle', style: `font-size:16px;font-weight:600;fill:${F}` }, 'photos we have, camera positions known'));
+  svg.append(el('text', { x: W - 4, y: NEW.y - 44, 'text-anchor': 'end', style: `font-size:16px;font-weight:600;fill:${T}` }, 'a new view,'));
+  svg.append(el('text', { x: W - 4, y: NEW.y - 25, 'text-anchor': 'end', style: `font-size:16px;font-weight:600;fill:${T}` }, 'rendered by NeRF'));
+  svg.append(el('text', { x: cx, y: H - 6, 'text-anchor': 'middle', style: `font-size:15px;fill:${INK3}` }, 'Lego scene rendered by NeRF (Mildenhall et al. 2020); cameras drawn by me.'));
   host.append(svg);
 })();
 
