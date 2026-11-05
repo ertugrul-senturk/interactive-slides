@@ -416,7 +416,8 @@ pre.code .c{color:var(--ink-3)}
 /* ---------- my capture: live Gaussians ---------- */
 .lv{display:grid;grid-template-columns:780px 1fr;gap:40px;align-items:start}
 .lv-fig{position:relative;border:1px solid var(--rule);background:#fff;width:780px;height:500px}
-.lv canvas{display:block;width:778px;height:498px;cursor:grab}
+.lv canvas{position:relative;display:block;width:778px;height:498px;cursor:grab}
+.lv-still{position:absolute;left:0;top:0;width:778px;height:498px}
 .lv canvas:active{cursor:grabbing}
 .lv-load{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--ink-3);pointer-events:none}
 .lv-text p{font-size:20px;line-height:1.48}
@@ -1142,13 +1143,13 @@ pre.code .c{color:var(--ink-3)}
 <section class="slide" id="s-live" data-title="My globe as Gaussians, in real time">
   <h2>My globe as Gaussians, drawn in real time</h2>
   <div class="lv">
-    <div class="lv-fig"><canvas id="lv-cv" aria-label="The trained Gaussians of my globe, drawn live; drag to turn, scroll to zoom"></canvas><div class="lv-load" id="lv-load">Loading the Gaussians…</div><div class="pts-hint">drag to turn, scroll to zoom</div></div>
+    <div class="lv-fig"><img class="lv-still" id="lv-still" src="2026-11-nerf/globe/live-still.jpg" alt=""><canvas id="lv-cv" aria-label="The trained Gaussians of my globe, drawn live; drag to turn, scroll to zoom"></canvas><div class="lv-load" id="lv-load">Loading the Gaussians…</div><div class="pts-hint">drag to turn, scroll to zoom</div></div>
     <div class="lv-text">
-      <p><span class="num" id="lv-n"></span> Gaussians from my training, drawn by this page on the laptop's GPU. Every frame they are sorted by depth and blended front to back with the same sum NeRF uses along a ray.</p>
+      <p>The Gaussians from my training, drawn by this page on the laptop's GPU. Every frame they are sorted by depth and blended front to back with the same sum NeRF uses along a ray.</p>
       <p class="lv-speed" id="lv-speed"></p>
     </div>
   </div>
-  <p class="src">My capture. Gaussians trained with gsplat 1.5.3; the ones with opacity below 0.02 are left out (no change in PSNR), a 29 MB file. Drawn by a WebGL2 renderer written for this talk, with view-dependent colour up to degree 3; its images match gsplat's to 41–43 dB. <a href="2026-11-nerf/live.html" target="_blank">Full window</a>.</p>
+  <p class="src">My capture. Gaussians trained with gsplat 1.5.3, drawn by a WebGL2 renderer written for this talk, with view-dependent colour up to degree 3; its images match gsplat's to 41–43 dB. <a href="2026-11-nerf/live.html" target="_blank">Full window</a>.</p>
   <aside class="notes">Now the payoff of Gaussian splatting: this is not a video. The page loaded my trained Gaussians and draws them on the GPU of this laptop as I move. Drag to turn it, scroll to zoom; let go and it keeps turning slowly. Per frame, each Gaussian is projected to an ellipse on the screen, its colour is evaluated for the current viewing direction, which is why the brass highlights move, all of them are sorted by depth and blended front to back. That blending is the same sum as in NeRF's volume rendering. The line under the text is measured live: a frame takes a few milliseconds, so the screen's refresh rate is the limit. NeRF needed 18 seconds for one image of the same scene. If the room needs a bigger picture, the full-window link opens the same viewer on its own.</aside>
 </section>
 
@@ -2327,7 +2328,7 @@ const fmtTime = s => s >= 3600 ? `${(s / 3600).toFixed(1)} h` : s >= 60 ? `${Mat
       { n: `The video, ${Math.floor(C.videoSeconds / 60)} min ${C.videoSeconds % 60} s`, cls: 'inp', v: C.videoMB },
       { n: `${C.trainPhotos} photos, JPEG`, cls: 'inp', v: C.photosMB },
       { n: 'NeRF', cls: 'me', v: N.megabytes }, { n: 'Instant-NGP', cls: '', v: I.megabytes }, { n: 'Gaussian splatting', cls: 'ref', v: G.megabytes }],
-      expl: `<p>NeRF keeps the whole globe, from every direction, in ${mb(N.megabytes)}: ${Math.round(C.photosMB / N.megabytes)} times less than the ${C.trainPhotos} photos it learned from.</p><p>Instant-NGP's hash tables take ${mb(I.megabytes)}, and Gaussian splatting's ${fmtInt(G.gaussians)} Gaussians ${mb(G.megabytes)}; packed for the live demo they fit in ${G.webMegabytes} MB.</p>` },
+      expl: `<p>NeRF keeps the whole globe, from every direction, in ${mb(N.megabytes)}: ${Math.round(C.photosMB / N.megabytes)} times less than the ${C.trainPhotos} photos it learned from.</p><p>Instant-NGP's hash tables take ${mb(I.megabytes)}, and Gaussian splatting's ${fmtInt(G.gaussians)} Gaussians ${mb(G.megabytes)}.</p>` },
     { head: 'Training time on my laptop', max: 9.5 * 3600, fmt: fmtTime, rows: [
       { n: 'NeRF', cls: 'me', v: N.hours * 3600 }, { n: 'Instant-NGP', cls: '', v: I.minutes * 60 }, { n: 'Gaussian splatting', cls: 'ref', v: G.minutes * 60 }],
       expl: `<p>${N.hours.toFixed(1)} hours for NeRF, ${I.minutes} minutes for Instant-NGP and ${G.minutes} minutes for Gaussian splatting, on the same GPU.</p><p>My Instant-NGP runs partly in PyTorch; with the paper's fully fused code it would take seconds to minutes.</p>` },
@@ -2351,7 +2352,6 @@ const fmtTime = s => s >= 3600 ? `${(s / 3600).toFixed(1)} h` : s >= 60 ? `${Mat
 (function(){
   const cv = $('#lv-cv'); if (!cv || !GLOBE) return;
   const me = $('#s-live'), from = slideIdx($('#s-part2'));
-  $('#lv-n').textContent = fmtInt(GLOBE.gs.webGaussians);
   let viewer = null, loading = null, ms = null, fps = 0;
   const speed = () => {
     const el2 = $('#lv-speed');
@@ -2371,8 +2371,8 @@ const fmtTime = s => s >= 3600 ? `${(s / 3600).toFixed(1)} h` : s >= 60 ? `${Mat
         onProgress: p => { const l = $('#lv-load'); if (l) l.textContent = `Loading the Gaussians… ${Math.round(p * 100)}%`; },
         onFps: f => { fps = f; speed(); },
       }))
-      .then(v => { viewer = v; const l = $('#lv-load'); if (l) l.remove(); if (me.classList.contains('active')) startLive(); return v; })
-      .catch(e => { const l = $('#lv-load'); if (l) l.textContent = 'The live view needs WebGL2 and the deck served over http (' + e.message + ').'; });
+      .then(v => { viewer = v; const l = $('#lv-load'); if (l) l.remove(); const st = $('#lv-still'); if (st) st.remove(); if (me.classList.contains('active')) startLive(); return v; })
+      .catch(e => { const l = $('#lv-load'); if (l) l.remove(); console.warn('live view unavailable, showing the still frame:', e.message); });   // e.g. opened from disk
     return loading;
   }
   function startLive(){

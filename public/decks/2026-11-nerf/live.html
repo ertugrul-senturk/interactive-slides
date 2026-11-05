@@ -30,7 +30,7 @@ try {
   const v = await createSplatViewer(document.getElementById('cv'), {
     url: 'gs/globe-gaussians', distance: 2.45, target: [0, 0, -0.01],
     onProgress: p => { load.textContent = `Loading the Gaussians… ${Math.round(p * 100)}%`; },
-    onFps: f => { fpsEl.textContent = `${v.count.toLocaleString('en-US')} Gaussians, ${Math.round(f)} frames per second` + (ms ? `, ${ms.toFixed(1)} ms to draw one` : ''); },
+    onFps: f => { fpsEl.textContent = `${Math.round(f)} frames per second` + (ms ? `, ${ms.toFixed(1)} ms to draw one` : ''); },
   });
   let ms = null;
   load.remove();
