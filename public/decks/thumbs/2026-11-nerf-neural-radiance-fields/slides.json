@@ -8,8 +8,8 @@
   "file": "s-task.jpg"
  },
  {
-  "id": "s-grid",
-  "file": "s-grid.jpg"
+  "id": "s-store",
+  "file": "s-store.jpg"
  },
  {
   "id": "s-field",
@@ -24,16 +24,20 @@
   "file": "s-train.jpg"
  },
  {
+  "id": "s-why3d",
+  "file": "s-why3d.jpg"
+ },
+ {
+  "id": "s-pe",
+  "file": "s-pe.jpg"
+ },
+ {
   "id": "s-net",
   "file": "s-net.jpg"
  },
  {
   "id": "s-view",
   "file": "s-view.jpg"
- },
- {
-  "id": "s-pe",
-  "file": "s-pe.jpg"
  },
  {
   "id": "s-fig4",
@@ -144,20 +148,16 @@
   "file": "s-capture.jpg"
  },
  {
-  "id": "s-points",
-  "file": "s-points.jpg"
- },
- {
   "id": "s-mask",
   "file": "s-mask.jpg"
  },
  {
-  "id": "s-gtrain",
-  "file": "s-gtrain.jpg"
+  "id": "s-points",
+  "file": "s-points.jpg"
  },
  {
-  "id": "s-orbit",
-  "file": "s-orbit.jpg"
+  "id": "s-gtrain",
+  "file": "s-gtrain.jpg"
  },
  {
   "id": "s-gres",
@@ -170,6 +170,10 @@
  {
   "id": "s-gcost",
   "file": "s-gcost.jpg"
+ },
+ {
+  "id": "s-orbit",
+  "file": "s-orbit.jpg"
  },
  {
   "id": "s-live",

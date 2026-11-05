@@ -48,6 +48,16 @@ These are concrete verdicts from reviewing the VPT deck (October 2026), grouped 
 - **Same picture twice.** Once the low-rank slide had its photo = B × A drawing, the next slide (ΔW = B A drawn to scale, with its own rank toggle) "explains the same thing". It was deleted; its unique points moved to the low-rank slide's notes and source line and to the method slide. Before adding a visual, check that no neighbouring slide already draws the same shape.
 - **Matrix shapes.** The rank-r cat photos alone did not show "the matrix representation". A small to-scale drawing (photo = tall B × wide A) that follows the rank tabs was added under the text.
 
+## NeRF deck, round 1 (November 2026)
+- **Spelling.** US English only: color, gray, center, optimize, neighboring. "Colour is not ok." Convert a whole deck with one pass before any other work.
+- **Statement titles.** "The network sees the direction only at the very end", "NeRF has the highest PSNR on all three test sets", "Five minutes of training beat hours of NeRF" were "bold statements like a business presentation". The deck is educational: "Inside the network", "Main results", "Instant-NGP against NeRF". A title names what the slide is about; the claim goes in a sentence on the slide.
+- **Title-slide lede.** "Fit one small network to the photos of one scene, then render that scene from viewpoints no camera took. Then two papers that made it fast." was "too AI". Accepted replacement is first person and plain: "NeRF learns one scene from a set of photos and can then draw it from any new viewpoint. I also cover the two papers that made this fast, …, and end with my own capture."
+- **Primitive illustration.** A 2D slice of a toy scene drawn as a pixel grid plus two memory squares was "too primitive and not understandable". What he asked for instead: "something more professional, unique but not too fancy, to impress the audience". The accepted replacement draws the same toy scene in perspective on three canvases (triangle mesh, voxel cubes, point cloud), turning slowly and draggable, with one shared detail slider that changes all three counts. Lesson: when a concept is 3D, draw it in 3D, in code, from one shared scene that the later slides reuse.
+- **Empty-looking step 0.** The rendering slide's right panel was three empty gray lanes at step 0, filled on later steps: "broken". Every step must look complete on its own; reveal by replacing one finished chart with the next, never by filling in blanks.
+- **Define before use.** "What is viewing direction and what is positional encoding? The audience probably doesn't know that either." A concept gets its own plain definition on the slide that first needs it, even when a later slide explains it in depth.
+- **Training needed more room.** One slide with the paper's pipeline figure was not understood ("I am not even fully understanding the training here"). It became two stepped slides drawn on the toy scene: one training step (photo pixel, ray, render, compare, repeat), then why the 3D shape appears (a wrong density satisfies one camera but not the other).
+- **Missing layout.** A slide's text column ending at 60% height with empty paper below reads as bad layout to him; size the drawing to the column.
+
 ## Static exports (PDF and PowerPoint)
 - **Leftover controls.** The storage slider and model-size buttons survived into the PDF/PowerPoint frozen at one value: "these are not interactive, so use some static value or create separate slides based on the logic". The slide now becomes three pages following the talk, each with a plain "Shown for …" line. The demo shows two recorded runs (all images, then 1,000) with a plain line instead of tabs and thumbnails.
 
@@ -56,3 +66,14 @@ These are concrete verdicts from reviewing the VPT deck (October 2026), grouped 
 - The source-line style.
 - The VPT method slide with the paper figure, a shallow/deep toggle and equations. It was very good, though the wording needed simplifying.
 - The round-2 charts on slides 12–18 ("it's going great, you have learned my style kinda"). Copy those patterns for new charts.
+
+## NeRF deck, round 2: his experiments part (November 2026)
+- **Name all the work.** He trained NeRF, Instant-NGP and Gaussian splatting, but the divider ("My own capture") and the training slide talked about NeRF only. The divider became "My experiments", and the training slide shows all three (tabs, one held-out photo plus three snapshots per model, steps and time in the captions).
+- **A curve of one photo's PSNR over steps** was "weird, it's just a picture". Show the pictures at a few points of training instead.
+- **Say what a recording is.** "New views of my globe" didn't say it was NeRF's output or why it was a video. Title "New views rendered by NeRF", and the text says I rendered 120 images and joined them because NeRF is too slow to show live.
+- **Start text with what I did.** "A 2 min 54 s video at 30 frames per second." is not an opening sentence; "I filmed the globe for almost three minutes …" is. Exact capture specs go in the source line.
+- **Captions must be true for every method.** "What NeRF is trained on" was wrong once three models used the masked photos; COLMAP gets the full photo. Mask slide moved before the points slide.
+- **A step's paragraph must describe what that step shows.** The points slide's step 1 zooms out to the cameras, so its text starts with the cameras, then says who uses the points.
+- **Thought-process slides are not results.** "Capturing a whole room from inside" is a what-next question, now "Outside an object, or inside a room", after the summary.
+- **Summary of a multi-method talk = one comparison table**: method, what it stores, what its paper showed, and the measured columns, with the best value per column in red and one sentence under it.
+- **Viewer:** with the slide list open, up/down change slides (PowerPoint habit). **Live 3D viewers** need panning too (right-drag, Shift-drag, two fingers), not only turn and zoom.

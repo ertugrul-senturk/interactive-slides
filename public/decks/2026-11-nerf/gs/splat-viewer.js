@@ -226,28 +226,51 @@ export async function createSplatViewer(canvas, opts = {}){
     return { eye, m: new Float32Array([r[0], dn[0], f[0], 0, r[1], dn[1], f[1], 0, r[2], dn[2], f[2], 0, tx, ty, tz, 1]), row: [f[0], f[1], f[2], tz] };
   }
 
-  // input: drag to turn (with a little inertia), wheel or pinch to zoom, double-click to go back
+  // input: drag to turn (with a little inertia); right-drag, Shift-drag or two fingers to move the
+  // object on the screen; wheel or pinch to zoom; double-click to go back to the starting view
   const pointers = new Map();
-  let pinch0 = null;
+  let pinch0 = null, panning = false;
   canvas.style.touchAction = 'none';
-  canvas.addEventListener('pointerdown', e => { canvas.setPointerCapture(e.pointerId); pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, t: performance.now() }); lastInput = performance.now(); vAz = vEl = 0; if (pointers.size === 2){ const [p, q] = [...pointers.values()]; pinch0 = { d: Math.hypot(p.x - q.x, p.y - q.y), dist: goal.dist }; } });
+  canvas.addEventListener('contextmenu', e => e.preventDefault());
+  // move the point the camera turns around, in the screen's plane, so the object follows the pointer
+  function pan(dx, dy){
+    const { m } = viewMatrix(), rect = canvas.getBoundingClientRect();
+    // world units per screen pixel at the turning point, from the same focal length the drawing uses
+    const s = cam.dist / Math.max(meta.focalRatio * Math.min(rect.width, rect.height * 1080 / 607) * (opts.zoom || 1), 1);
+    const r = [m[0], m[4], m[8]], dn = [m[1], m[5], m[9]];
+    for (let i = 0; i < 3; i++) cam.target[i] = Math.max(-1, Math.min(1, cam.target[i] - (r[i] * dx + dn[i] * dy) * s));
+    dirty = true;
+  }
+  const mid = () => { const [a, b] = [...pointers.values()]; return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; };
+  canvas.addEventListener('pointerdown', e => {
+    try { canvas.setPointerCapture(e.pointerId); } catch {}
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, t: performance.now() });
+    lastInput = performance.now(); vAz = vEl = 0;
+    if (pointers.size === 1) panning = e.button === 1 || e.button === 2 || e.shiftKey;
+    if (pointers.size === 2){ const [p, q] = [...pointers.values()]; pinch0 = { d: Math.hypot(p.x - q.x, p.y - q.y), dist: goal.dist, mid: mid() }; }
+  });
   canvas.addEventListener('pointermove', e => {
     const p = pointers.get(e.pointerId); if (!p) return;
     const now = performance.now(), rect = canvas.getBoundingClientRect(), k = 3.2 / Math.max(rect.width, 1);
-    if (pointers.size === 1){
+    if (pointers.size === 1 && panning) pan(e.clientX - p.x, e.clientY - p.y);
+    else if (pointers.size === 1){
       const dAz = -(e.clientX - p.x) * k, dEl = (e.clientY - p.y) * k * 0.8, dt = Math.max(now - p.t, 1) / 1000;
       cam.az += dAz; cam.el = Math.max(-1.1, Math.min(1.45, cam.el + dEl));
       vAz = 0.7 * vAz + 0.3 * dAz / dt; vEl = 0.7 * vEl + 0.3 * dEl / dt;
     }
     p.x = e.clientX; p.y = e.clientY; p.t = now; lastInput = now; dirty = true;
-    if (pointers.size === 2 && pinch0){ const [a, b] = [...pointers.values()]; goal.dist = clampDist(pinch0.dist * pinch0.d / Math.max(Math.hypot(a.x - b.x, a.y - b.y), 1)); }
+    if (pointers.size === 2 && pinch0){
+      const [a, b] = [...pointers.values()], c = mid();
+      goal.dist = clampDist(pinch0.dist * pinch0.d / Math.max(Math.hypot(a.x - b.x, a.y - b.y), 1));
+      pan(c.x - pinch0.mid.x, c.y - pinch0.mid.y); pinch0.mid = c;
+    }
   });
-  const up = e => { const p = pointers.get(e.pointerId); pointers.delete(e.pointerId); if (pointers.size < 2) pinch0 = null; if (p && performance.now() - p.t > 60){ vAz = vEl = 0; } };
+  const up = e => { const p = pointers.get(e.pointerId); pointers.delete(e.pointerId); if (pointers.size < 2) pinch0 = null; if (!pointers.size) panning = false; if (p && performance.now() - p.t > 60){ vAz = vEl = 0; } };
   canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
   canvas.addEventListener('wheel', e => { e.preventDefault(); goal.dist = clampDist(goal.dist * Math.exp(e.deltaY * 0.0012)); lastInput = performance.now(); }, { passive: false });
   canvas.addEventListener('dblclick', () => reset());
   const clampDist = d => Math.max(0.6, Math.min(4, d));
-  function reset(){ Object.assign(cam, { az: home.az, el: home.el, dist: home.dist }); goal.dist = home.dist; vAz = vEl = 0; lastInput = -1e9; dirty = true; }
+  function reset(){ Object.assign(cam, { az: home.az, el: home.el, dist: home.dist, target: [...home.target] }); goal.dist = home.dist; vAz = vEl = 0; lastInput = -1e9; dirty = true; }
 
   // render loop
   let raf = 0, last = 0, dirty = true, fpsT = 0, fpsN = 0, fps = 0;

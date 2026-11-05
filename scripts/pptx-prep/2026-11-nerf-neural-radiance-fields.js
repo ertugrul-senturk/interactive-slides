@@ -1,19 +1,22 @@
 // Runs inside the NeRF deck before it is converted to PowerPoint and PDF, where the controls cannot work.
 // Slides stepped by the arrow key (tabs with data-steps) become one page per step on their own and need nothing here.
 (() => {
-  // Grid slide: the slider can't be dragged in a static file, so the slide becomes three pages that follow the notes
-  // (32 cubes per side, then 128 as in Neural Volumes, then 1,024), and the slider becomes a plain line.
-  const ctl = document.getElementById("grid-ctl");
-  if (ctl && window.nerfGrid) {
-    const NS = [8, 16, 32, 128, 512, 1024];
+  // Storage slide: the three drawings turn by themselves and the detail slider can't be dragged in a static file,
+  // so the scene stops at a fixed angle, the slide becomes two pages (medium detail, then very high) and the slider
+  // becomes a plain line.
+  const sctl = document.getElementById("st-ctl");
+  if (sctl && window.nerfStore) {
     const line = document.createElement("p");
-    line.style.cssText = "margin:14px 0 0;font-size:19px;line-height:1.45;color:var(--ink-2)";
-    ctl.replaceWith(line);
-    const show = (i, extra) => { window.nerfGrid(i); line.innerHTML = `Shown for <b>${NS[i].toLocaleString("en-US")} cubes per side</b>.${extra}`; };
+    line.style.cssText = "margin:0;font-size:19px;line-height:1.45;color:var(--ink-2)";
+    sctl.replaceWith(line);
+    window.nerfStore.spin(false); window.nerfStore.turn(0.95, 0.42);
+    const ssrc = document.querySelector("#s-store .src");
+    if (ssrc) ssrc.innerHTML = ssrc.innerHTML.replace(", drawn live; drag a picture to turn it.", ".");
+    const show = (i, txt) => { window.nerfStore.level(i); line.innerHTML = txt; };
     window.pptxSteps = Object.assign(window.pptxSteps || {}, {
-      "s-grid": [() => show(2, " The next pages show 128 and 1,024."), () => show(3, " Neural Volumes uses this grid."), () => show(5, "")],
+      "s-store": [() => show(1, "Shown at <b>medium</b> detail; the next page shows very high."), () => show(3, "Shown at <b>very high</b> detail.")],
     });
-    show(2, " The next pages show 128 and 1,024.");
+    show(1, "Shown at <b>medium</b> detail; the next page shows very high.");
   }
 
   // Rendering slide: the pixel slider goes; the strip still marks the pixel whose ray is drawn.
@@ -35,13 +38,14 @@
   if (sp) sp.textContent = "Shown live in the talk; here one frame of it. A frame took about 4 ms to draw on my laptop, while NeRF needs 18 seconds for one image.";
 })();
 
-// My capture, new views: the video becomes its still frame.
+// My capture, new views: the video becomes its still frame (keeping the id, so the NeRF / Instant-NGP steps swap the still).
 (() => {
   const v = document.getElementById("orb-video");
   if (!v) return;
   const img = document.createElement("img");
   img.src = v.getAttribute("poster");
-  img.alt = "One frame of the NeRF orbit: colour on the left, depth on the right";
+  img.id = "orb-video";
+  img.alt = "One frame of the orbit: color on the left, depth on the right";
   img.style.cssText = "display:block;width:1120px;height:auto;border:1px solid var(--rule);background:#fff";
   v.replaceWith(img);
 })();

@@ -12,6 +12,9 @@ export default function Viewer({ href, title, slides, children }: { href: string
   const list = useRef<HTMLOListElement>(null);
   const [open, setOpen] = useState(true);
   const [cur, setCur] = useState(0);
+  // the key handlers are attached once, so they read the latest values through refs
+  const curRef = useRef(0), openRef = useRef(true);
+  curRef.current = cur; openRef.current = open;
 
   // remember whether the list was open; on a narrow screen it starts hidden
   useEffect(() => {
@@ -36,11 +39,27 @@ export default function Viewer({ href, title, slides, children }: { href: string
       watch = new MutationObserver(sync);
       all.forEach((s) => watch!.observe(s, { attributes: true, attributeFilter: ["class"] }));
       sync();
+      // with the slide list open, up and down move a whole slide, as in PowerPoint's slide pane
+      el.contentWindow?.addEventListener("keydown", upDown, true);
     };
     if (el.contentDocument?.readyState === "complete") attach();
     el.addEventListener("load", attach);
-    return () => { el.removeEventListener("load", attach); watch?.disconnect(); };
+    addEventListener("keydown", upDown, true);
+    return () => {
+      el.removeEventListener("load", attach); watch?.disconnect();
+      removeEventListener("keydown", upDown, true);
+      el.contentWindow?.removeEventListener("keydown", upDown, true);
+    };
   }, []);
+
+  function upDown(e: KeyboardEvent) {
+    if (!openRef.current || (e.key !== "ArrowUp" && e.key !== "ArrowDown") || e.altKey || e.ctrlKey || e.metaKey) return;
+    const t = e.target as HTMLElement | null;
+    if (t?.closest?.("input, textarea, select, [contenteditable]")) return;
+    e.preventDefault(); e.stopPropagation();
+    const k = curRef.current + (e.key === "ArrowDown" ? 1 : -1);
+    if (k >= 0 && k < slides.length) go(k);
+  }
 
   // keep the current slide in view in the list, without moving the page
   useEffect(() => {
