@@ -414,22 +414,42 @@ pre.code .c{color:var(--ink-3)}
 #s-after figcaption{font-size:16px;color:var(--ink-3);margin-top:4px}
 
 /* ---------- Instant-NGP ---------- */
-#s-ngp .fig,#s-gs .fig{padding:6px 10px;margin-bottom:20px}
-#s-ngp-levels .fig img{width:880px;margin:0 auto}
-.hh{display:grid;grid-template-columns:440px 1fr;gap:48px;align-items:start}
-.hh svg{display:block;overflow:visible}
-.hh-tab{display:flex;gap:26px;align-items:center;margin:22px 0 10px}
-.hh-count{font-size:19px;line-height:1.45;color:var(--ink);margin:0;min-height:5.8em}
-.hh-text{min-height:5em}
-.hh-text p{font-size:19.5px;color:var(--ink-2)}
+#s-ngp-fig2 .fig,#s-gs-fig1 .fig{padding:6px 10px;margin-bottom:20px}
+.ngc{display:grid;grid-template-columns:460px 1fr;gap:40px;align-items:start}
+.ngc svg{display:block;overflow:visible}
+#ngc-top{overflow:hidden}
+.ngc .cap{margin-top:6px}
+.ngg{display:grid;grid-template-columns:600px 1fr;gap:44px;align-items:start}
+.ngg>svg{display:block;overflow:hidden}
+.ng-text{min-height:8.4em}
+.ng-text p{font-size:20px;margin:0 0 10px}
+#ngg-mix,#ngk-bars{display:block;overflow:visible;margin-top:4px}
+.ngl-tab{border-collapse:collapse;font-size:18px;margin-top:4px;width:100%}
+.ngl-tab caption{text-align:left;font-size:16px;color:var(--ink-3);padding-bottom:4px}
+.ngl-tab td{padding:8px 10px 8px 0;border-bottom:1px solid var(--rule);color:var(--ink-3);transition:color .3s}
+.ngl-tab tr.on td{color:var(--ink);font-weight:600}
+.ngl-tab td.r{text-align:right}
+#ngh-table{display:block;margin:2px 0 10px}
+.ngh-count{font-size:18.5px;line-height:1.45;color:var(--ink-2);margin:0}
 .ngs{display:grid;grid-template-columns:560px 1fr;gap:40px;align-items:start}
 .ngs figure{margin:0}
 .ngs img{display:block;width:100%;height:auto;border:1px solid var(--rule)}
 .ngs figcaption{font-size:16px;color:var(--ink-3);margin-top:5px}
 .ngs-crops{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
 .ngs p{font-size:20px}
+/* storage: squares sized by area in one row, the text under them */
+.stsq{position:relative;height:340px;margin-top:4px}
+.stsq .sq{position:absolute;bottom:64px;transition:all .4s ease}
+.stsq .ml{position:absolute;bottom:0;font-size:17px;line-height:1.3;color:var(--ink-2);white-space:nowrap;transition:left .4s ease}
+.stsq .ml b{font-size:21px;color:var(--ink)}
+.st-text{min-height:4.6em;margin-top:18px;max-width:1080px}
+.st-text p{font-size:20px;margin:0 0 8px}
 
 /* ---------- 3D Gaussian splatting ---------- */
+.gsi{margin:0}
+.gsi svg{display:block;overflow:hidden}
+.gsi figcaption{font-size:16px;color:var(--ink-3);margin-top:6px}
+#gsp-top,#gst-top{overflow:hidden}
 .g1{display:grid;grid-template-columns:520px 1fr;gap:48px;align-items:start}
 .g1 svg{display:block;overflow:visible}
 .g1-bar{display:flex;height:46px;margin:10px 0 8px;border-radius:3px;overflow:hidden}
@@ -439,8 +459,9 @@ pre.code .c{color:var(--ink-3)}
 .g1-text{min-height:7.5em}
 .g1-text p{font-size:20px}
 .g1-foot{font-family:var(--serif);font-size:22px;color:var(--ink);border-left:3px solid var(--tuned);padding:2px 0 2px 16px}
-.gst{display:grid;grid-template-columns:500px 1fr;gap:48px;align-items:start}
+.gst{display:grid;grid-template-columns:600px 1fr;gap:44px;align-items:start}
 .gst p{font-size:20px}
+.gst-fig{width:420px;padding:6px}
 .gsc{display:grid;grid-template-columns:repeat(3,272px) 1fr;gap:10px 20px;margin-top:14px}
 .gsc .ctext{grid-column:4;grid-row:1/span 2;align-self:center;min-height:0}
 .gsc figure{margin:0}
@@ -952,43 +973,96 @@ pre.code .c{color:var(--ink-3)}
   <aside class="notes">This is the second part of the talk. NeRF's idea was widely adopted, but it was slow, with days of training per scene and seconds per frame. I picked the two papers that fixed this and that most people use today. Instant-NGP from NVIDIA, SIGGRAPH 2022, keeps NeRF's rendering but makes each query much cheaper. 3D Gaussian splatting from Inria, SIGGRAPH 2023, keeps NeRF's image formation but throws away the network: the scene is millions of small blobs that a graphics card can draw directly. Both images on the right are from the papers.</aside>
 </section>
 
-<!-- ============================================================ Instant-NGP: the idea -->
-<section class="slide" id="s-ngp" data-title="The idea of Instant-NGP">
-  <h2>The idea of Instant-NGP</h2>
-  <div class="fig"><img src="2026-11-nerf/ngp/ngp-fig2.png" alt="Paper Fig. 2: the same scene reconstructed with six input encodings: no encoding, NeRF's frequency encoding, a dense grid, a multiresolution dense grid, and two hash tables, with parameter counts, training times and PSNR under each."></div>
-  <div class="two even" style="gap:48px">
-    <p>The paper trains the same scene six ways for 11,000 steps each. NeRF's sine encoding (b) needs a large network of 438,000 weights and takes almost 13 minutes.</p>
-    <p>A grid of learned feature vectors (c, d) lets a network of 10,000 weights do the rest, so training takes about a minute, but a dense grid needs millions of numbers. A hash table (e, f) keeps the speed and gives the best image, 24.6 dB.</p>
+<!-- ============================================================ Instant-NGP: what changes -->
+<section class="slide" id="s-ngp" data-title="What Instant-NGP changes in NeRF">
+  <h2>What Instant-NGP changes in NeRF</h2>
+  <div class="ngc">
+    <div>
+      <svg id="ngc-top" width="460" height="290" role="img" aria-label="The toy scene from above with the camera, the ray of one pixel and the points along it, as in the NeRF part."></svg>
+      <p class="cap">Rays, the points along them and the rendering sum stay as in NeRF.</p>
+    </div>
+    <svg id="ngc-svg" width="620" height="330" role="img" aria-label="Two rows. NeRF: a point and its direction go through sines and cosines into a big network, which returns density and color. Instant-NGP: the point reads learned numbers from grids, and a tiny network returns density and color."></svg>
   </div>
-  <p class="src">Müller et al. 2022, Fig. 2. Under each image: network weights + encoding parameters, training time (minutes:seconds) and PSNR.</p>
-  <aside class="notes">This figure contains the main argument of the paper, so read it from left to right. (a) Raw coordinates: blurry, as we saw. (b) NeRF's sine encoding with NeRF's big network: sharp, but slow, nearly 13 minutes even in their fast code. (c) Instead of making the network do all the work, store learned feature vectors on a 3D grid and interpolate them; then a tiny network of 10,000 weights is enough, and training takes about one minute. The cost is 33.6 million grid numbers, most of them for empty space. (d) Several coarser grids give the same quality with half the numbers. (e, f) The paper's contribution is to put the grids in hash tables of fixed size. With a big table it is the best image here, 24.6 dB, at the same speed. The next two slides explain the grids and the hashing.</aside>
+  <div class="two even" style="gap:48px;margin-top:16px">
+    <p>NeRF asks one big network about every point. The whole scene is hidden in its 600,000 weights, and every training step changes all of them.</p>
+    <p>Instant-NGP stores learned numbers on grids in space. A point reads the few numbers around it, and a tiny network of about 10,000 weights does the rest.</p>
+  </div>
+  <p class="src">Müller et al. 2022, Sec. 3 and 5.4: one network of 64 neurons for density and one of two layers for color, together about 10,000 weights (Fig. 2). NeRF's network: Mildenhall et al. 2020, Fig. 7, about 594,000 weights.</p>
+  <aside class="notes">Instant-NGP, NVIDIA, SIGGRAPH 2022. The key point first: almost everything from the NeRF part stays. The camera sends a ray per pixel, we take points along it, and the pixel is the same rendering sum of density and color. The only thing that changes is the box that answers "what is at this point". In NeRF, top row, the point is turned into sines and cosines and goes through a big network of eight layers. The whole scene is stored inside those weights, so every training step has to change all of them, and every query is a big matrix multiplication. In Instant-NGP, bottom row, the scene is mostly stored as learned numbers on grids in space. The point reads the numbers near it, and a tiny network turns them into density and color. The next slides show what reading a grid means.</aside>
 </section>
 
-<!-- ============================================================ Instant-NGP: the levels -->
-<section class="slide" id="s-ngp-levels" data-title="Looking a point up in several grids">
-  <h2>Looking a point up in several grids</h2>
-  <div class="fig" style="padding:8px 24px"><img src="2026-11-nerf/ngp/ngp-fig3.png" alt="Paper Fig. 3, in 2D: a point inside a coarse and a fine grid; the corners of its cells are hashed into tables, their feature vectors are interpolated, concatenated and fed to a small network."></div>
-  <div class="two even" style="gap:48px;margin-top:20px">
-    <p>Each of 16 grids, from 16 cells per side to as fine as the photos need, finds the cell around the point (1) and reads the learned vectors stored at its corners (2). They are blended by distance (3), and the 16 results go into a tiny network (4, 5).</p>
-    <p>A point touches only 8 corners per grid, so each training step changes only a few table entries. The coarse grids describe the overall shape and the fine ones the detail, like the frequencies of NeRF's encoding, but learned.</p>
+<!-- ============================================================ Instant-NGP: one grid -->
+<section class="slide" id="s-ngp-grid" data-title="A grid of learned numbers" data-steps="2">
+  <h2>A grid of learned numbers</h2>
+  <div class="ngg">
+    <svg id="ngg-top" width="600" height="430" role="img" aria-label="The toy scene from above with a grid over it; each corner is a dot in the color its learned numbers stand for. One point on the ray, its cell and its four corners are highlighted."></svg>
+    <div>
+      <div class="ng-text" id="ngg-text"></div>
+      <svg id="ngg-mix" width="470" height="130" role="img" aria-label="The four corner values with their weights, mixed into one value that a tiny network turns into density and color."></svg>
+    </div>
   </div>
-  <p class="src">Müller et al. 2022, Fig. 3 (drawn in 2D, two levels, red and blue) and Table 1: 16 levels, 2 numbers per entry, coarsest grid 16 cells per side.</p>
-  <aside class="notes">The figure shows two of the sixteen levels in 2D. The point x falls into a cell of the coarse blue grid and of the finer red grid. Step 1: the corners of these cells get indices; step 2: each index points to an entry in that level's table, which holds two learned numbers; step 3: the four corner values, eight in 3D, are blended according to where x sits in the cell; step 4: the results of all levels are concatenated, together with the encoded viewing direction; step 5: a tiny network maps them to density and color. Training updates the network and the table entries by backpropagation. The intuition is that the grids play the role of NeRF's frequencies, coarse to fine, but the values are learned and local, so a query is a few memory reads instead of a big matrix multiplication.</aside>
+  <p class="src">Müller et al. 2022, Sec. 3, Fig. 3: the corner values are blended by (bi/tri)linear interpolation. Each corner stores 2 learned numbers that only the network interprets; they are drawn here as the color they come to stand for.</p>
+  <aside class="notes">Same toy scene, seen from above, with a grid over it. Step 0: every corner of the grid stores two learned numbers. I draw them as the color they end up standing for, so you can see the scene in the corners: white in the air, orange at the glass, blue in the ball. In the paper the grid is 3D, so each cell has 8 corners. Step 1: to ask about one point on the ray, find the cell it falls in and take the four corners. They are mixed by distance, the nearer corner counts more, here shown with the percentages. The tiny network turns the mixed numbers into density and color, the same answer NeRF's big network gives. Step 2: training. The pixel is compared with the photo exactly as in NeRF, and the error flows back. But it only reaches the corners that were used, these four, and the tiny network. NeRF changes all 600,000 weights for every point. That locality is the main reason Instant-NGP learns in seconds.</aside>
+</section>
+
+<!-- ============================================================ Instant-NGP: coarse and fine grids -->
+<section class="slide" id="s-ngp-levels" data-title="Coarse and fine grids" data-steps="2">
+  <h2>Coarse and fine grids</h2>
+  <div class="ngg">
+    <svg id="ngl-top" width="600" height="430" role="img" aria-label="The toy scene as one grid can show it, by mixing the corner values everywhere: blurry with large cells, sharp with small cells."></svg>
+    <div>
+      <div class="ng-text" id="ngl-text"></div>
+      <table class="ngl-tab num" id="ngl-tab">
+        <caption>Corners of one grid in 3D</caption>
+        <tr><td>16 cells per side</td><td class="r">4,913</td></tr>
+        <tr><td>128 cells per side</td><td class="r">2.1 million</td></tr>
+        <tr><td>2,048 cells per side</td><td class="r">8.6 billion</td></tr>
+      </table>
+    </div>
+  </div>
+  <p class="src">Müller et al. 2022, Sec. 3 and Table 1: L = 16 grids, the coarsest with 16 cells per side, each finer one by a constant factor; the values of all 16 are concatenated before the network. Pictures: the toy scene rebuilt from one 2D grid with large, medium and small cells.</p>
+  <aside class="notes">A grid can only show what is larger than its cells, because between corners the values are just mixed. Step 0: big cells. The ball is a soft blob and the thin glass almost disappears. Step 1: medium cells, the shapes appear. Step 2: small cells, sharp. But look at the table, it is about 3D: every time the cells get half as big there are 8 times more corners. At 2,048 cells per side a single grid has 8.6 billion corners, which does not fit in any GPU. Instant-NGP uses 16 grids at once, from 16 cells per side to very fine. A point reads all 16, and the 16 results go together into the tiny network: the coarse grids give the rough shape, the fine ones the detail. This plays the same role as NeRF's sines at doubling frequencies, but the values are learned. The fine grids are still too big, which is the next slide.</aside>
 </section>
 
 <!-- ============================================================ Instant-NGP: hashing -->
 <section class="slide" id="s-ngp-hash" data-title="Storing the fine grids in a hash table" data-steps="2">
   <h2>Storing the fine grids in a hash table</h2>
-  <div class="hh">
-    <svg id="hh-grid" width="440" height="440" role="img" aria-label="A 2D grid of cells over the unit square with a query point; corners that share the highlighted table entry are circled in red."></svg>
+  <div class="ngg">
+    <svg id="ngh-top" width="600" height="430" role="img" aria-label="A fine grid over the toy scene; one corner at the front of the ball is red and the other corners that share its table slot are circled."></svg>
     <div>
-      <div class="seg" id="hh-seg" role="group" aria-label="Grid"><button type="button" data-v="0" aria-pressed="true">8 × 8 cells</button><button type="button" data-v="1" aria-pressed="false">16 × 16 cells</button><button type="button" data-v="2" aria-pressed="false">32 × 32 cells</button></div>
-      <div class="hh-tab"><svg id="hh-table" width="250" height="250" role="img" aria-label="A table of 100 entries, shaded by how many corners use each entry."></svg><p class="hh-count num" id="hh-count"></p></div>
-      <div class="hh-text" id="hh-text"></div>
+      <div class="ng-text" id="ngh-text"></div>
+      <svg id="ngh-table" width="430" height="214" role="img" aria-label="The table of 128 slots, darker where more corners share a slot; the slot of the red corner is outlined in red."></svg>
+      <p class="ngh-count num" id="ngh-count"></p>
     </div>
   </div>
-  <p class="src">Illustration with a table of 100 entries; the paper uses up to 2<sup>19</sup> = 524,288 entries per grid for NeRF. Hash function of the paper (Eq. 4): corner (x, y) goes to entry (x ⊕ 2,654,435,761·y) mod T, where ⊕ is bitwise XOR.</p>
-  <aside class="notes">The reason to hash is that a fine 3D grid has billions of corners, far too many to store. So every grid gets a table of fixed size T, and corners are mapped into it by a hash function, a cheap formula that scatters them pseudo-randomly. Step through the grid sizes. With 8 by 8 cells there are 81 corners and 100 entries: every corner gets its own entry, no hashing needed; the paper does the same for its coarse grids. At 16 by 16 there are 289 corners, so about three share each entry, and the red rings show the corners that share the entry of our point's corner. At 32 by 32, about eleven share one. The paper does nothing to resolve these collisions. During training, the shared entry gets pulled mostly by the corner that matters, usually one near a visible surface, because empty space produces small gradients; and the network can tell the cases apart using the coarse grids, which never collide.</aside>
+  <p class="src">Illustration with 128 slots; the paper uses up to 2<sup>19</sup> = 524,288 slots per grid, each with 2 learned numbers. Hash function of the paper (Eq. 4), in 2D: corner (<span class="m">i</span>, <span class="m">j</span>) goes to slot (<span class="m">i</span> ⊕ 2,654,435,761 <span class="m">j</span>) mod <span class="m">T</span>, where ⊕ is bitwise XOR.</p>
+  <aside class="notes">The solution to the 8.6 billion corners. Every grid gets a table of fixed size, in the paper 524,288 slots. Step 0: a hash function, a cheap formula, sends every corner to a slot. Coarse grids have fewer corners than slots, so there each corner simply has its own slot. Fine grids have many more corners than slots, so corners share. Here 1,200 corners share 128 slots, about nine each. Step 1: take the red corner at the front of the ball. Its slot is shared by the circled corners, scattered all over the scene, and all of them read the same two numbers. The paper does nothing to prevent this. Step 2: why it still works. Of the corners in that slot, only the red one is near anything; the others are in empty air. No photo ever shows empty air, so training pulls the shared numbers toward what the visible corner needs. And the coarse grids have no sharing, so the network can still tell the cases apart. The table size is the memory knob: it stays fixed no matter how fine the grid.</aside>
+</section>
+
+<!-- ============================================================ Instant-NGP: empty space -->
+<section class="slide" id="s-ngp-skip" data-title="Skipping empty space" data-steps="1">
+  <h2>Skipping empty space</h2>
+  <div class="ngg">
+    <svg id="ngk-top" width="600" height="430" role="img" aria-label="The toy scene from above with one ray. NeRF's points are spread over the whole ray; Instant-NGP shades the cells that hold something and places points only inside them."></svg>
+    <div>
+      <div class="ng-text" id="ngk-text" style="min-height:7.6em"></div>
+      <svg id="ngk-bars" width="470" height="210" role="img" aria-label="Multiply-adds per ray: NeRF about 152 million, Instant-NGP at most about 0.26 million."></svg>
+    </div>
+  </div>
+  <p class="src">NeRF: 64 + 192 points per ray through networks of about 594,000 weights (Mildenhall et al. 2020, Sec. 5.3, Fig. 7). Instant-NGP: 3.1 to 25.7 points per ray on the NeRF scenes (Müller et al. 2022, Table 3, Sec. 5.4: occupancy grid), about 10,000 weights. Toy scene with occupancy cells of my choosing.</p>
+  <aside class="notes">The last trick, and it is mostly engineering. Step 0: NeRF spreads its points over the whole ray, 64 and then 192 more, and every one goes through a network of 600,000 weights. Most of them are in empty air. Step 1: Instant-NGP keeps a coarse map of which cells contain anything, shaded red; it is updated from the densities during training. A ray jumps over empty cells and only takes points inside shaded ones. On the paper's scenes that is 3 to 26 points per ray instead of 256. Together with the tiny network the arithmetic per ray drops from about 150 million multiply-adds to at most a quarter of a million, about 600 times less. The tiny network also fits into the GPU's fastest on-chip memory, which their hand-written CUDA code exploits.</aside>
+</section>
+
+<!-- ============================================================ Instant-NGP: Fig. 2 -->
+<section class="slide" id="s-ngp-fig2" data-title="Six encodings of the same scene">
+  <h2>Six encodings of the same scene</h2>
+  <div class="fig"><img src="2026-11-nerf/ngp/ngp-fig2.png" alt="Paper Fig. 2: the same scene reconstructed with six input encodings: no encoding, NeRF's frequency encoding, a dense grid, a multiresolution dense grid, and two hash tables, with parameter counts, training times and PSNR under each."></div>
+  <div class="two even" style="gap:48px">
+    <p>The paper trains the same scene six ways for 11,000 steps each. NeRF's sines (b) need a network of 438,000 weights and almost 13 minutes.</p>
+    <p>Grids with a tiny network (c, d) train in about a minute but need 16 to 34 million numbers. The hash tables (e, f) keep the speed, cap the memory, and the larger one gives the sharpest image, 24.6 dB.</p>
+  </div>
+  <p class="src">Müller et al. 2022, Fig. 2. Under each image: network weights + grid or table numbers, training time (minutes:seconds) and PSNR.</p>
+  <aside class="notes">Now that the pieces are explained, the paper's own comparison reads easily. (a) Raw coordinates, no encoding: blurry. (b) NeRF's sines with NeRF's big network: sharp but nearly 13 minutes, even in their fast code. (c) One dense grid with the tiny network: about a minute, but 33.6 million numbers. (d) Several grids, coarse to fine: better and half the numbers. (e) and (f) the hash tables: same speed, a fixed memory budget, and with the large table, 2 to the 19 slots, the best image, 24.6 dB.</aside>
 </section>
 
 <!-- ============================================================ Instant-NGP: seconds -->
@@ -1024,30 +1098,28 @@ pre.code .c{color:var(--ink-3)}
   <aside class="notes">Table 2 of the paper, averaged over NeRF's eight synthetic scenes. The red bars are Instant-NGP after 1 second, 5 seconds, 15 seconds, 1 minute and 5 minutes. The dashed line is NeRF after its full training. After 15 seconds Instant-NGP is already above it; after 5 minutes it matches mip-NeRF, the best method of the time, which also trains for hours. The second step checks whether it is just better engineering. The authors swapped the hash grid for NeRF's sine encoding and big network inside their own fast code. After 5 minutes that version is at 30.1 dB, below what the hash version has after 15 seconds; they attribute a 20 to 60 times speed-up to the encoding itself.</aside>
 </section>
 
-<!-- ============================================================ Instant-NGP: why -->
-<section class="slide" id="s-ngp-why" data-title="Why Instant-NGP is faster" data-steps="1">
-  <h2>Why Instant-NGP is faster</h2>
-  <div class="cost">
-    <div class="stage">
-      <div class="panel" id="ngw-0"><svg id="ngw-svg" width="600" height="400" role="img" aria-label="Multiply-adds per ray: NeRF about 152 million, Instant-NGP at most about 0.26 million."></svg></div>
-      <div class="panel off" id="ngw-1"><div class="sqs num" id="ngw-sq"></div></div>
-    </div>
-    <div class="expl" id="ngw-expl"></div>
-  </div>
-  <p class="src">Computed from the papers: NeRF evaluates 64 + 192 points per ray with a network of about 594,000 weights (Mildenhall et al. 2020, Fig. 7, Sec. 5.3). Instant-NGP uses 3.1 to 25.7 points per ray (Müller et al. 2022, Table 3) and a network of about 10,000 weights (Fig. 2); 12.6 million table entries with T = 2<sup>19</sup> (Fig. 2f).</p>
-  <aside class="notes">Two steps. First, compute per ray. NeRF sends 256 points per ray through a network of roughly 600,000 weights: about 150 million multiply-adds for a single pixel. Instant-NGP keeps a coarse grid that marks which cells are occupied, so it skips empty space and needs only 3 to 26 points per ray, and each point costs 16 small table reads plus a network of 10,000 weights. That is roughly 600 times less arithmetic per ray, and the tiny network fits into the GPU's fastest on-chip memory, which their hand-written CUDA code exploits. The second step is the cost, which is memory. The tables hold 12.6 million learned numbers, ten times NeRF's 1.2 million weights. It is still a radiance field rendered by ray marching, so rendering is fast but not as fast as rasterization, which is the next paper.</aside>
+<!-- ============================================================ Instant-NGP: storage -->
+<section class="slide" id="s-ngp-store" data-title="What Instant-NGP stores" data-steps="1">
+  <h2>What Instant-NGP stores</h2>
+  <div class="stsq num" id="ngst-sq"></div>
+  <div class="st-text" id="ngst-text"></div>
+  <p class="src">Instant-NGP: 12.6 million numbers with <span class="m">T</span> = 2<sup>19</sup> (Müller et al. 2022, Fig. 2f), 2 bytes each in half precision; my own Instant-NGP file of the globe is 24 MB. NeRF 5 MB and LLFF over 15 GB: Mildenhall et al. 2020, Sec. 6.3. Dense grid: 2,048<sup>3</sup> corners × 2 numbers × 2 bytes. Squares are sized by area.</p>
+  <aside class="notes">Speed has a price, and it is memory. Step 0: NeRF is about 5 MB, Instant-NGP about 25 MB, five times more; in numbers 12.6 million against 1.2 million, ten times. Why? In NeRF every weight is shared by every point in space, the network is one compact formula for the whole scene. A table entry only describes the small region around its corners, so you need many more of them. Instant-NGP trades memory for speed. Step 1: zoom out. 25 MB is still tiny next to how scenes were stored before. LLFF, the best earlier method on real photos, needs over 15 GB for one scene. A single dense grid as fine as Instant-NGP's finest one would need about 34 GB. The hash tables are exactly what keeps it at 25 MB.</aside>
 </section>
 
 <!-- ============================================================ 3DGS: the idea -->
-<section class="slide" id="s-gs" data-title="3D Gaussian splatting">
-  <h2>3D Gaussian splatting</h2>
-  <div class="fig"><img src="2026-11-nerf/gs/gs-fig1.png" alt="Paper Fig. 1: the same view of the Bicycle scene by Instant-NGP, Plenoxels, Mip-NeRF 360, and 3D Gaussian splatting after 6 and 51 minutes of training, with frame rates, training times and PSNR, and the ground truth."></div>
-  <div class="two even" style="gap:48px">
-    <p>The scene becomes a cloud of a few million small, colored, see-through blobs called 3D Gaussians. An image is made by projecting every blob onto the screen and blending them, the way a graphics card draws triangles.</p>
-    <p>On this view, after 6 minutes of training it renders 135 frames per second. After 51 minutes it beats Mip-NeRF 360, which trained for 48 hours and renders one frame every 14 seconds.</p>
+<section class="slide" id="s-gs" data-title="The idea of Gaussian splatting">
+  <h2>The idea of Gaussian splatting</h2>
+  <div class="two even" style="gap:40px">
+    <figure class="gsi"><svg id="gsi-nerf" width="540" height="300" role="img" aria-label="The toy scene from above with nine rays from the camera and points along each of them."></svg><figcaption>NeRF and Instant-NGP: ask about points along every ray</figcaption></figure>
+    <figure class="gsi"><svg id="gsi-gs" width="540" height="300" role="img" aria-label="The same toy scene stored as 16 soft colored ellipses: six thin orange ones for the glass and ten blue ones for the ball."></svg><figcaption>Gaussian splatting: keep a list of soft blobs and draw them</figcaption></figure>
   </div>
-  <p class="src">Kerbl et al. 2023, Fig. 1: a test view of the Bicycle scene; frame rates and training times on one A6000 GPU. Mip-NeRF 360 (Barron et al. 2022) was the best-quality NeRF variant at the time; Plenoxels (Fridovich-Keil and Yu et al. 2022) is a sparse voxel grid without a network.</p>
-  <aside class="notes">Read the labels under the images. Instant-NGP and Plenoxels train in minutes but render at about 9 frames per second and lose detail. Mip-NeRF 360, the best NeRF of 2022, is the quality reference: 48 hours of training and 0.071 frames per second. Gaussian splatting after 6 minutes is already at Instant-NGP's quality but renders at 135 frames per second; after 51 minutes it beats Mip-NeRF 360's PSNR on this view and still renders at 93 frames per second. The key change is that there is no network to query and no rays to march. The scene is explicit, a list of primitives, and rendering is rasterization, which is what GPUs were built for.</aside>
+  <div class="two even" style="gap:40px;margin-top:18px">
+    <p>NeRF and Instant-NGP ask what is at points along every ray, and most of those points are empty air.</p>
+    <p>Gaussian splatting stores only where something is: a list of soft, colored, see-through blobs called 3D Gaussians. An image is made by drawing them onto the screen, with no network and no rays.</p>
+  </div>
+  <p class="src">Kerbl et al. 2023, Sec. 1 and 4. Toy scene as in the NeRF part, here made of 16 Gaussians; a real scene has 1 to 5 million.</p>
+  <aside class="notes">3D Gaussian splatting, Inria, SIGGRAPH 2023. It turns the question around. NeRF and Instant-NGP, left, ask "what is at this point?" for points along every ray, and most of those points are empty air. Gaussian splatting, right, stores only the things that exist, as a list of soft blobs. Making an image is then drawing the list onto the screen, the way a graphics card draws the triangles of a video game. There is no network to ask and no ray to march. The same toy scene here is 16 blobs; a real scene has millions.</aside>
 </section>
 
 <!-- ============================================================ 3DGS: one Gaussian -->
@@ -1065,40 +1137,60 @@ pre.code .c{color:var(--ink-3)}
   <aside class="notes">One Gaussian is a soft ellipsoid, densest at its center and fading out. Step 0, position and shape: 3 numbers for the center, 3 sizes along its own axes and a rotation stored as a quaternion of 4 numbers. Stretching lets one Gaussian be a thin needle for a branch or a flat disc for a wall. Step 1: one opacity, how much light it blocks at its center. Step 2: the color, which may change with the viewing direction exactly as in NeRF; it is stored as spherical harmonics, a smooth function over directions, 16 coefficients per color channel, 48 numbers. So most of the memory is color. 59 numbers per Gaussian, a few million Gaussians, hundreds of megabytes.</aside>
 </section>
 
-<!-- ============================================================ 3DGS: rendering -->
-<section class="slide" id="s-gs-render" data-title="Rendering the Gaussians" data-steps="2">
-  <h2>Rendering the Gaussians</h2>
+<!-- ============================================================ 3DGS: projection -->
+<section class="slide" id="s-gs-splat" data-title="Projecting the Gaussians onto the screen" data-steps="2">
+  <h2>Projecting the Gaussians onto the screen</h2>
   <div class="vr">
+    <div><svg id="gsp-top" width="540" height="340" role="img" aria-label="The toy scene as Gaussians seen from above, with the camera's screen; the lines from the camera to the edges of one Gaussian mark where it lands on the screen."></svg></div>
+    <div><svg id="gsp-plot" width="560" height="340" role="img" aria-label="The camera's image row: each Gaussian becomes a soft bump on it; below, the image row made from the Gaussians and the one NeRF rendered."></svg></div>
+  </div>
+  <div class="vr-text" id="gsp-text"></div>
+  <p class="src">Kerbl et al. 2023, Sec. 4 and 6: each 3D Gaussian is projected to a 2D Gaussian on the screen (the splat), using the Jacobian of the projection. The toy scene is 2D, so the screen is one row of pixels and each splat is a 1D bump.</p>
+  <aside class="notes">How the list becomes an image. Step 0: take one Gaussian. Project it onto the camera's screen: the two lines from the camera mark where it lands. On the screen it becomes a soft patch, called the splat; this is where the name comes from, like throwing a paint ball at a window. Our toy scene is flat, so the screen is a single row of pixels and the splat is a bump: tall where the Gaussian blocks much light, wide when it is near or big. Step 1: every Gaussian is projected the same way, each one on its own. This is exactly what graphics cards are built for. Step 2: blending the bumps at every pixel gives the image row. Compare it with NeRF's row from the rendering slide: the same glass, ball and background, with softer edges, and no network was asked and no ray was marched. The next slide does one pixel slowly.</aside>
+</section>
+
+<!-- ============================================================ 3DGS: one pixel -->
+<section class="slide" id="s-gs-render" data-title="Rendering one pixel from the Gaussians" data-steps="2">
+  <h2>Rendering one pixel from the Gaussians</h2>
+  <div class="vr">
+    <div><svg id="gr-top" width="540" height="340" role="img" aria-label="The toy scene as Gaussians seen from above, with the line of one pixel; the Gaussians that cover this pixel are numbered from near to far."></svg></div>
     <div>
-      <svg id="gr-top" width="540" height="300" role="img" aria-label="The toy scene drawn as Gaussians, seen from above, with one camera ray crossing some of them."></svg>
-      <div class="strip"><span style="width:84px">rendered</span><span class="px" id="gr-px"></span></div>
-    </div>
-    <div>
-      <svg id="gr-plot" width="560" height="300" role="img" aria-label="The Gaussians crossed by the ray in depth order, with their opacity, the light still getting through, and their contribution."></svg>
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-top:2px">
+      <svg id="gr-plot" width="560" height="270" role="img" aria-label="One row per Gaussian that covers the pixel, nearest first: its color, its opacity at this pixel, the light still getting through, and its contribution."></svg>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-top:6px">
         <div class="eq" style="font-size:22px;line-height:1.6"><span class="m">C</span> = Σ<sub><span class="m">i</span></sub> <span class="m">c<sub>i</sub></span> α<sub><span class="m">i</span></sub> Π<sub><span class="m">j</span>&lt;<span class="m">i</span></sub> (1 − α<sub><span class="m">j</span></sub>)</div>
-        <div class="pixout" data-step="2">pixel<i id="gr-swatch"></i></div>
+        <div class="pixout" data-step="2">this pixel<i id="gr-swatch"></i></div>
       </div>
     </div>
   </div>
   <div class="vr-text" id="gr-text"></div>
-  <p class="src">Kerbl et al. 2023, Sec. 2 and 6: the blending sum is NeRF's Eq. 3 with α<sub>i</sub> = 1 − e<sup>−σ<sub>i</sub>δ<sub>i</sub></sup>; sorting is done once per 16 × 16-pixel tile. Toy scene as in the NeRF part, made of 9 Gaussians; each Gaussian's α is taken where the ray passes closest to its center.</p>
-  <aside class="notes">Same toy scene and same camera as in the NeRF part, but now stored as nine Gaussians: three thin orange ones for the pane, six blue ones for the ball. Step 0: one pixel's ray crosses a few of them. Step 1: they are sorted by depth. On the GPU this happens once for each 16 by 16 tile of the screen with one big radix sort, not per pixel. Each Gaussian contributes an opacity alpha, its opacity times how close the ray passes to its center. Step 2: blend front to back. The formula is NeRF's rendering sum, just written with alpha; the 3DGS paper makes exactly this point. The difference is that nothing is sampled or queried: each term is read from a Gaussian, and only Gaussians that touch the pixel take part. The strip on the left is the whole image row, very close to the NeRF strip.</aside>
+  <p class="src">Kerbl et al. 2023, Sec. 2 and 6, Eq. 3: the blending sum is NeRF's Eq. 3 with α<sub><span class="m">i</span></sub> = 1 − <span class="m">e</span><sup>−σ<sub>i</sub>δ<sub>i</sub></sup>. Sorting is done once per 16 × 16-pixel tile with one radix sort. Same pixel as on NeRF's rendering slide.</p>
+  <aside class="notes">One pixel, the same pixel as on NeRF's rendering slide. Step 0: the splats that cover this pixel, numbered, sorted nearest first. On the GPU the screen is cut into tiles of 16 by 16 pixels and the splats are sorted once per tile, with one big sort, not per pixel. Each splat has an opacity alpha at this pixel: its own opacity times how close the pixel is to the center of the splat. Step 1: the light still getting through, starting at one and shrinking behind each Gaussian, exactly NeRF's T. Step 2: each Gaussian adds its color times its alpha times the light still getting through, and the sum is the pixel. This is NeRF's rendering sum, and the paper says so. The only difference is where the terms come from: read from a list instead of asked from a network at hundreds of points.</aside>
 </section>
 
 <!-- ============================================================ 3DGS: training -->
-<section class="slide" id="s-gs-train" data-title="Training the Gaussians">
+<section class="slide" id="s-gs-train" data-title="Training the Gaussians" data-steps="3">
   <h2>Training the Gaussians</h2>
   <div class="gst">
-    <div class="fig"><img src="2026-11-nerf/gs/gs-fig4.png" alt="Paper Fig. 4: under-reconstruction, a small Gaussian is cloned; over-reconstruction, a large Gaussian is split in two; optimization then fits the shape."></div>
+    <svg id="gst-top" width="600" height="430" role="img" aria-label="The toy scene from above, dashed outlines of the glass and the ball, and the Gaussians at four moments of training: the COLMAP points, after some steps, cloning and splitting, and the end."></svg>
     <div>
-      <p>Training starts from the 3D points COLMAP found while computing the camera positions, each one a small round Gaussian. Rendered images are compared with the photos, as in NeRF, and every number of every Gaussian is adjusted by gradient descent.</p>
-      <p>Every 100 steps the set itself changes. Where detail is missing, a small Gaussian is cloned; where one large Gaussian covers fine detail, it is split in two; nearly transparent ones are removed.</p>
-      <p>After 30,000 steps a scene has 1 to 5 million Gaussians.</p>
+      <div class="ng-text" id="gst-text" style="min-height:7.2em"></div>
+      <div class="fig gst-fig"><img src="2026-11-nerf/gs/gs-fig4.png" alt="Paper Fig. 4: under-reconstruction, a small Gaussian is cloned; over-reconstruction, a large Gaussian is split in two; optimization then fits the shape."></div>
     </div>
   </div>
-  <p class="src">Kerbl et al. 2023, Fig. 4 and Sec. 5. The loss is 0.8 × L1 + 0.2 × D-SSIM between the render and the photo. Cloning and splitting are triggered by large position gradients.</p>
-  <aside class="notes">How do a few thousand COLMAP points become millions of well-shaped Gaussians? Everything is differentiable, so position, shape, opacity and color of every Gaussian are optimized by comparing renders with photos, as in NeRF. In addition, every 100 steps the method looks at Gaussians whose position gradients are large, a sign that the region is not yet explained. If such a Gaussian is small, it is copied and the copy is moved along the gradient: that is under-reconstruction, top row. If it is large, it is split into two smaller ones: over-reconstruction, bottom row. Gaussians whose opacity drops close to zero are deleted. The loss mixes L1 with a structural similarity term. My own capture already has the starting points, as I show at the end.</aside>
+  <p class="src">Kerbl et al. 2023, Fig. 4 and Sec. 5: loss 0.8 × L1 + 0.2 × D-SSIM between render and photo; every 100 steps, Gaussians with large position gradients are cloned (small) or split (large), and nearly transparent ones removed; 30,000 steps. Toy drawing of the four moments.</p>
+  <aside class="notes">How a few thousand points become millions of good Gaussians. Step 0: start from the 3D points COLMAP found while computing the camera positions; we get them for free. Each point becomes a small round Gaussian with its color. The dashed outlines are what the photos show. Step 1: render the training views, compare with the photos as in NeRF, and let gradient descent move, stretch, turn and recolor every Gaussian. This works because the splatting is differentiable. Some regions stay wrong, and there the Gaussians keep being pulled hard, red arrows: the top of the glass has no Gaussian yet, and one big Gaussian spills over the edge of the ball. Step 2: every 100 steps the set changes. A small Gaussian pulled hard is cloned and the copy moves into the gap; that is under-reconstruction, top row of the paper's figure. A big one pulled hard is split into two smaller ones, over-reconstruction, bottom row. Nearly transparent ones are deleted. Step 3: after 30,000 steps the shapes are covered: 1 to 5 million Gaussians on the paper's scenes, about 500,000 on my globe.</aside>
+</section>
+
+<!-- ============================================================ 3DGS: Fig. 1 -->
+<section class="slide" id="s-gs-fig1" data-title="Speed and quality on one test view">
+  <h2>Speed and quality on one test view</h2>
+  <div class="fig"><img src="2026-11-nerf/gs/gs-fig1.png" alt="Paper Fig. 1: the same view of the Bicycle scene by Instant-NGP, Plenoxels, Mip-NeRF 360, and 3D Gaussian splatting after 6 and 51 minutes of training, with frame rates, training times and PSNR, and the ground truth."></div>
+  <div class="two even" style="gap:48px">
+    <p>Under each image: frames per second, training time and PSNR. Instant-NGP and Plenoxels train in minutes, but they render about 9 frames per second and lose detail.</p>
+    <p>After 6 minutes of training, Gaussian splatting renders 135 frames per second. After 51 minutes it beats Mip-NeRF 360, which trained for 48 hours and needs 14 seconds per frame.</p>
+  </div>
+  <p class="src">Kerbl et al. 2023, Fig. 1: a test view of the Bicycle scene; one A6000 GPU. Mip-NeRF 360 (Barron et al. 2022) was the best-quality NeRF variant at the time; Plenoxels (Fridovich-Keil and Yu et al. 2022) is a sparse voxel grid without a network.</p>
+  <aside class="notes">The paper's first figure, now that we know how it works. Instant-NGP and Plenoxels train in minutes but render at about 9 frames per second and lose detail. Mip-NeRF 360, the best NeRF of 2022, is the quality reference: 48 hours of training and 0.071 frames per second. Gaussian splatting after 6 minutes is already at Instant-NGP's quality but renders at 135 frames per second; after 51 minutes it beats Mip-NeRF 360's PSNR on this view and still renders at 93 frames per second.</aside>
 </section>
 
 <!-- ============================================================ 3DGS: Table 1 -->
@@ -1124,18 +1216,13 @@ pre.code .c{color:var(--ink-3)}
   <aside class="notes">The paper's Fig. 5, one scene per step, same order of columns throughout: the photo, Gaussian splatting, Mip-NeRF 360, Instant-NGP, Plenoxels. Bicycle: Instant-NGP leaves dark floaters on the path, Plenoxels blurs the grass. Garden: all are close; the fast methods lose some sharpness in the background. Stump: Instant-NGP fills the background with ghosts and Plenoxels with colored smears. Dr Johnson, an indoor scene with plain white walls: the fast methods leave noise and cloudy patches on the walls, the Gaussians stay clean. Mip-NeRF 360 is good everywhere; it is simply four orders of magnitude slower to render.</aside>
 </section>
 
-<!-- ============================================================ 3DGS: cost -->
-<section class="slide" id="s-gs-cost" data-title="What Gaussian splatting costs">
-  <h2>What Gaussian splatting costs</h2>
-  <div class="cost">
-    <div class="sqs num" id="gsk-sq" style="height:420px"></div>
-    <div class="expl">
-      <p>Every Gaussian keeps 59 numbers and a scene has millions of them: 734 MB on average for the Mip-NeRF 360 scenes, 85 times the size of Mip-NeRF 360's network. Training a large scene can need more than 20 GB of GPU memory.</p>
-      <p>Where the photos see little, Gaussians become stretched or blotchy, and large ones can pop in and out as the camera moves. The method also needs good COLMAP points to start from.</p>
-    </div>
-  </div>
-  <p class="src">Kerbl et al. 2023, Table 1 (mean size per scene, Mip-NeRF 360 dataset) and Sec. 7.4 (limitations). Squares are sized by area.</p>
-  <aside class="notes">The other side. An explicit representation is big, hundreds of megabytes per scene, against a few megabytes for a network; much follow-up work compresses Gaussians. For training memory, the authors report more than 20 GB of GPU memory for large scenes in their prototype. For quality, in regions seen by few photos you get elongated or splotchy Gaussians, and large Gaussians can pop when the sort order changes as the camera moves. And it depends on the structure-from-motion points for its start; random initialization works on synthetic scenes but is worse on real ones.</aside>
+<!-- ============================================================ 3DGS: storage -->
+<section class="slide" id="s-gs-cost" data-title="What Gaussian splatting stores" data-steps="1">
+  <h2>What Gaussian splatting stores</h2>
+  <div class="stsq num" id="gsk-sq"></div>
+  <div class="st-text" id="gsk-text"></div>
+  <p class="src">Kerbl et al. 2023, Table 1 (mean size per scene, Mip-NeRF 360 dataset) and Sec. 7.4 (limitations). 59 numbers × 4 bytes = 236 bytes per Gaussian; 734 MB ÷ 236 bytes ≈ 3 million Gaussians. Squares are sized by area.</p>
+  <aside class="notes">The price of drawing without a network. Step 0: Gaussian splatting is the largest of the three, 734 MB per scene on average against 8.6 MB for Mip-NeRF 360 and 48 MB for Instant-NGP. The reason is that nothing is shared. Every Gaussian keeps its own 59 numbers, about 240 bytes, and a scene needs about 3 million of them. 48 of the 59 are the color that changes with the viewing direction. Everything a network would compute is written down instead, which is exactly why it renders so fast. Step 1: zoom out. Plenoxels, a voxel grid without a network, takes 2.1 GB on the same scenes, almost three times more, and looks worse. So a few hundred megabytes for a scene you can fly through in real time is still a good deal; much follow-up work compresses Gaussians further. The other limits: training a large scene can need over 20 GB of GPU memory, and where the photos see little, Gaussians become stretched or blotchy.</aside>
 </section>
 
 <!-- ============================================================ three ways -->
@@ -1308,8 +1395,8 @@ pre.code .c{color:var(--ink-3)}
 </section>
 
 <!-- ============================================================ my capture: Gaussian splatting live -->
-<section class="slide" id="s-live" data-title="My globe as Gaussians, live">
-  <h2>My globe as Gaussians, live</h2>
+<section class="slide" id="s-live" data-title="My globe as Gaussian splatting, live demo">
+  <h2>My globe as Gaussian splatting, live demo</h2>
   <div class="lv">
     <div class="lv-fig"><img class="lv-still" id="lv-still" src="2026-11-nerf/globe/live-still.jpg" alt=""><canvas id="lv-cv" aria-label="The trained Gaussians of my globe, drawn live; drag to turn, right-drag or Shift-drag to move, scroll to zoom, double-click to reset"></canvas><div class="lv-load" id="lv-load">Loading the Gaussians…</div><div class="pts-hint">drag to turn, right-drag to move, scroll to zoom</div><button type="button" class="lv-fs" id="lv-fs" title="Show the live view on the whole screen (Esc to go back)">Full screen</button></div>
     <div class="lv-text">
@@ -2444,50 +2531,249 @@ function barChart(host, rows, opt){
 
 
 
-/* ---------------- Instant-NGP: corners of a 2D grid hashed into a table of 100 entries ---------------- */
+/* ---------------- Instant-NGP and Gaussian splatting: helpers on the toy scene ---------------- */
+// what the top view shows at a world point: the glass as drawn (tinted over white), the ball's color, or white air
+const PANE_SEEN = TOY.pane.c.map(v => 0.55 * v + 0.45 * 255);
+function seen(x, y){ const f = field(x, y); return f.what === 'ball' ? f.c : f.what === 'pane' ? PANE_SEEN : [255, 255, 255]; }
+// a regular 2D grid over the whole top view with cell size c; each corner keeps the mean of what it covers,
+// standing in for the learned numbers after training
+function toyGrid(c){
+  const x0 = -0.75, y0 = -4.2, nx = Math.ceil(10.5 / c), ny = Math.ceil(8.4 / c), V = [];
+  for (let j = 0; j <= ny; j++) for (let i = 0; i <= nx; i++){
+    const acc = [0, 0, 0]; let n = 0;
+    for (let q = -3; q <= 3; q++) for (let p = -3; p <= 3; p++){ const s = seen(x0 + (i + p / 6) * c, y0 + (j + q / 6) * c); acc[0] += s[0]; acc[1] += s[1]; acc[2] += s[2]; n++; }
+    V.push(acc.map(v => v / n));
+  }
+  const at = (i, j) => V[j * (nx + 1) + i];
+  const cell = (x, y) => { const gx = (x - x0) / c, gy = (y - y0) / c, i = Math.min(nx - 1, Math.max(0, Math.floor(gx))), j = Math.min(ny - 1, Math.max(0, Math.floor(gy))); return { i, j, fx: gx - i, fy: gy - j }; };
+  const lerp = (x, y) => { const { i, j, fx, fy } = cell(x, y), a = at(i, j), b = at(i + 1, j), d = at(i, j + 1), e = at(i + 1, j + 1); return [0, 1, 2].map(k => a[k] * (1 - fx) * (1 - fy) + b[k] * fx * (1 - fy) + d[k] * (1 - fx) * fy + e[k] * fx * fy); };
+  return { c, nx, ny, at, cell, lerp, cx: i => x0 + i * c, cy: j => y0 + j * c };
+}
+// paint a function of the world position into a top view, under the camera and its frustum
+function paintTop(svg, W, H, sx, fn){
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const g = cv.getContext('2d'), im = g.createImageData(W, H);
+  for (let py = 0; py < H; py++) for (let px = 0; px < W; px++){
+    const c = fn((px + .5) / sx - 0.75, (H / 2 - py - .5) / sx), k = 4 * (py * W + px);
+    im.data[k] = c[0]; im.data[k + 1] = c[1]; im.data[k + 2] = c[2]; im.data[k + 3] = 255;
+  }
+  g.putImageData(im, 0, 0);
+  return cv.toDataURL();
+}
+function putPicture(svg, url, W, H){ svg.insertBefore(el('image', { href: url, x: 0, y: 0, width: W, height: H }), svg.children[1]); }
+const faded = k => (x, y) => seen(x, y).map(v => 255 - k * (255 - v));
+function rayOf(svg, X, Y, a, col, w){ const e = TOY.far + .2; svg.append(el('line', { x1: X(0) + 6, y1: Y(0), x2: X(e * Math.cos(a)), y2: Y(e * Math.sin(a)), stroke: col, 'stroke-width': w || 1.6 })); }
+
+
+/* ---------------- Instant-NGP: what changes, NeRF's pipeline against Instant-NGP's ---------------- */
 (function(){
-  const svg = $('#hh-grid'), tab = $('#hh-table'); if (!svg) return;
-  const T = 100, NS_ = [8, 16, 32], PX = 0.37, PY = 0.58, S = 420, O = 10;
-  // the paper's spatial hash (Eq. 4), pi_1 = 1 and pi_2 = 2654435761, on 32-bit unsigned integers
-  const hashOf = (n, x, y) => (n + 1) ** 2 <= T ? x + y * (n + 1) : ((x ^ Math.imul(y, 2654435761 | 0)) >>> 0) % T;
+  const top = $('#ngc-top'), svg = $('#ngc-svg'); if (!top) return;
+  const F = css('--frozen'), T = css('--tuned'), INK = css('--ink'), INK2 = css('--ink-2'), INK3 = css('--ink-3');
+  const a = pixAngle(22);
+  const { X, Y } = topView(top, 460, 290, { labels: true });
+  rayOf(top, X, Y, a, F);
+  stratified(64).forEach(t => top.append(el('circle', { cx: X(t * Math.cos(a)), cy: Y(t * Math.sin(a)), r: 2.2, fill: INK, 'fill-opacity': .75 })));
+  const defs = el('defs'); defs.innerHTML = `<marker id="ngc-m" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0 L9 4.5 L0 9 z" fill="${INK3}"/></marker>`; svg.append(defs);
+  const box = (x, yc, w, lines) => {
+    svg.append(el('rect', { x, y: yc - 35, width: w, height: 70, rx: 4, fill: css('--token'), stroke: css('--token-line') }));
+    lines.forEach((s, i) => svg.append(el('text', { x: x + w / 2, y: yc + 6 + (i - (lines.length - 1) / 2) * 21, 'text-anchor': 'middle', style: `font-size:17px;fill:${INK}` }, s)));
+  };
+  const arrow = (x1, x2, y) => svg.append(el('line', { x1, x2: x2 - 4, y1: y, y2: y, stroke: INK3, 'stroke-width': 1.6, 'marker-end': 'url(#ngc-m)' }));
+  const net = (x0, w, cols, rows, yc, h, r) => {
+    const P = Array.from({ length: cols }, (_, c) => Array.from({ length: rows }, (_, k) => [x0 + c * w / (cols - 1), yc + (k - (rows - 1) / 2) * h / (rows - 1)]));
+    for (let c = 0; c < cols - 1; c++) P[c].forEach(p => P[c + 1].forEach(q => svg.append(el('line', { x1: p[0], y1: p[1], x2: q[0], y2: q[1], stroke: T, 'stroke-opacity': .28 }))));
+    P.flat().forEach(([x, y]) => svg.append(el('circle', { cx: x, cy: y, r, fill: T })));
+  };
+  const note = (x, y, s) => svg.append(el('text', { x, y, 'text-anchor': 'middle', style: `font-size:15.5px;fill:${INK2}` }, s));
+  const title = (y, s, col) => svg.append(el('text', { x: 0, y, style: `font-family:var(--serif);font-size:22px;font-weight:600;fill:${col}` }, s));
+  // NeRF
+  title(22, 'NeRF', INK);
+  box(0, 78, 118, ['a point and', 'its direction']); arrow(124, 154, 78);
+  box(158, 78, 118, ['sines and', 'cosines']); arrow(282, 312, 78);
+  net(322, 124, 8, 6, 78, 64, 4.2); arrow(456, 486, 78);
+  box(490, 78, 130, ['density σ,', 'color c']);
+  note(384, 140, 'about 600,000 weights');
+  // Instant-NGP
+  title(196, 'Instant-NGP', T);
+  box(0, 252, 118, ['a point and', 'its direction']); arrow(124, 154, 252);
+  [[0, 4], [9, 8], [18, 16]].forEach(([o, n]) => {
+    const x = 160 + o, y = 222 - o + 9, s = 62;
+    svg.append(el('rect', { x, y, width: s, height: s, fill: css('--white'), stroke: T, 'stroke-width': 1.4 }));
+    for (let k = 1; k < n; k++){ svg.append(el('line', { x1: x + k * s / n, x2: x + k * s / n, y1: y, y2: y + s, stroke: T, 'stroke-opacity': .55 })); svg.append(el('line', { x1: x, x2: x + s, y1: y + k * s / n, y2: y + k * s / n, stroke: T, 'stroke-opacity': .55 })); }
+  });
+  arrow(250, 330, 252);
+  net(340, 64, 3, 3, 252, 40, 4.2); arrow(414, 486, 252);
+  box(490, 252, 130, ['density σ,', 'color c']);
+  note(206, 318, 'learned grids');
+  note(372, 318, 'about 10,000 weights');
+})();
+
+
+/* ---------------- Instant-NGP: one grid over the toy scene, one point read from its corners ---------------- */
+(function(){
+  const top = $('#ngg-top'), mix = $('#ngg-mix'); if (!top) return;
+  const G = toyGrid(0.75), a = pixAngle(22), W = 600, H = 430;
+  const tHit = dense.find(t => field(t * Math.cos(a), t * Math.sin(a)).what === 'ball');
+  const P = [(tHit + 0.3) * Math.cos(a), (tHit + 0.3) * Math.sin(a)];
+  const { i, j, fx, fy } = G.cell(P[0], P[1]);
+  const CORN = [[i, j, (1 - fx) * (1 - fy)], [i + 1, j, fx * (1 - fy)], [i, j + 1, (1 - fx) * fy], [i + 1, j + 1, fx * fy]];
+  let pic = null;
   const TEXT = [
-    '<p>A coarse grid has fewer corners than the table has entries, so every corner simply gets its own entry. The paper does the same for its coarse grids.</p>',
-    '<p>A finer grid has more corners than entries. A hash function scatters them over the table, so several far-apart corners share one entry, circled in red.</p>',
-    '<p>The paper does not resolve these collisions. Training pulls each shared entry mostly toward the corner near a visible surface, and the coarse grids, which never collide, tell the rest apart.</p>',
+    '<p>Instant-NGP lays a grid over the scene. Every corner stores two learned numbers, drawn here as the color they come to stand for after training. In 3D the grid has cubes, so a cell has 8 corners.</p>',
+    '<p>To ask about a point, find its cell and mix the numbers of its corners; the nearer a corner, the more it counts. The tiny network turns the mix into density and color, the answer NeRF\'s big network gives.</p>',
+    '<p>Training compares the pixel with the photo, as in NeRF. The error flows back only into the corners around the points used, here these 4, and into the tiny network. NeRF changes all of its 600,000 weights for every point.</p>',
   ];
   function draw(st){
-    const n = NS_[st], T_ = css('--tuned'), INK = css('--ink'), INK3 = css('--ink-3'), RULE = css('--rule');
-    svg.innerHTML = '';
-    const X = i => O + S * i / n, Y = j => O + S - S * j / n;
-    svg.append(el('rect', { x: O, y: O, width: S, height: S, fill: css('--white'), stroke: INK3 }));
-    for (let k = 1; k < n; k++){ svg.append(el('line', { x1: X(k), x2: X(k), y1: O, y2: O + S, stroke: RULE })); svg.append(el('line', { x1: O, x2: O + S, y1: Y(k), y2: Y(k), stroke: RULE })); }
-    const cx = Math.floor(PX * n), cy = Math.floor(PY * n), sel = hashOf(n, cx, cy);
-    const use = new Array(T).fill(0); let shared = 0;
-    for (let j = 0; j <= n; j++) for (let i = 0; i <= n; i++){
-      const h = hashOf(n, i, j); use[h]++;
-      svg.append(el('circle', { cx: X(i), cy: Y(j), r: n > 16 ? 1.6 : 2.4, fill: INK3 }));
-      if (h === sel){ shared++; svg.append(el('circle', { cx: X(i), cy: Y(j), r: 6.5, fill: 'none', stroke: T_, 'stroke-width': 2.2 })); }
+    const T = css('--tuned'), INK = css('--ink'), INK2 = css('--ink-2'), INK3 = css('--ink-3'), RULE = css('--rule');
+    const { X, Y, sx } = topView(top, W, H, { shapes: false, labels: false });
+    pic = pic || paintTop(top, W, H, sx, faded(0.3)); putPicture(top, pic, W, H);
+    const g = el('g', { opacity: st === 2 ? .3 : 1 }); top.append(g);
+    for (let k = 0; k <= G.nx; k++) g.append(el('line', { x1: X(G.cx(k)), x2: X(G.cx(k)), y1: 0, y2: H, stroke: RULE }));
+    for (let k = 0; k <= G.ny; k++) g.append(el('line', { x1: 0, x2: W, y1: Y(G.cy(k)), y2: Y(G.cy(k)), stroke: RULE }));
+    for (let q = 0; q <= G.ny; q++) for (let p = 0; p <= G.nx; p++) g.append(el('circle', { cx: X(G.cx(p)), cy: Y(G.cy(q)), r: 5.5, fill: rgb(G.at(p, q)), stroke: INK3, 'stroke-width': .8 }));
+    if (st >= 1){
+      rayOf(top, X, Y, a, css('--frozen'), 1.4);
+      top.append(el('rect', { x: X(G.cx(i)), y: Y(G.cy(j + 1)), width: G.c * sx, height: G.c * sx, fill: T, 'fill-opacity': .08, stroke: T, 'stroke-width': 1.5 }));
+      CORN.forEach(([p, q, w]) => top.append(el('line', { x1: X(P[0]), y1: Y(P[1]), x2: X(G.cx(p)), y2: Y(G.cy(q)), stroke: INK, 'stroke-width': 1 + 5 * w })));
+      CORN.forEach(([p, q]) => top.append(el('circle', { cx: X(G.cx(p)), cy: Y(G.cy(q)), r: 8.5, fill: rgb(G.at(p, q)), stroke: st === 2 ? T : INK, 'stroke-width': st === 2 ? 3 : 1.5 })));
+      top.append(el('circle', { cx: X(P[0]), cy: Y(P[1]), r: 5, fill: INK }));
     }
-    // the cell around the point, its four corners and the point itself
-    svg.append(el('rect', { x: X(cx), y: Y(cy + 1), width: S / n, height: S / n, fill: T_, 'fill-opacity': .1, stroke: T_, 'stroke-width': 1.5 }));
-    [[cx, cy], [cx + 1, cy], [cx, cy + 1], [cx + 1, cy + 1]].forEach(([i, j]) => svg.append(el('line', { x1: O + S * PX, y1: O + S - S * PY, x2: X(i), y2: Y(j), stroke: INK, 'stroke-width': 1, 'stroke-dasharray': '3 3' })));
-    svg.append(el('circle', { cx: O + S * PX, cy: O + S - S * PY, r: 5, fill: INK }));
-    svg.append(el('text', { x: O + S * PX + 9, y: O + S - S * PY - 9, style: 'font-size:16px;font-weight:600;fill:' + INK }, 'x'));
-    // the table: 10 x 10 entries, darker = used by more corners
-    tab.innerHTML = '';
-    const mx = Math.max(...use);
-    for (let k = 0; k < T; k++){
-      const a = use[k] ? 0.12 + 0.6 * use[k] / Math.max(mx, 1) : 0;
-      tab.append(el('rect', { x: (k % 10) * 25, y: Math.floor(k / 10) * 25, width: 23, height: 23, rx: 2, fill: INK, 'fill-opacity': a, stroke: k === sel ? T_ : RULE, 'stroke-width': k === sel ? 3 : 1 }));
+    // the panel under the text
+    mix.innerHTML = '';
+    const sw = (x, y, c, s, stroke, w) => mix.append(el('rect', { x, y, width: s, height: s, rx: 3, fill: rgb(c), stroke: stroke || RULE, 'stroke-width': w || 1 }));
+    const tx = (x, y, s, style, anchor) => mix.append(el('text', { x, y, 'text-anchor': anchor || 'middle', style }, s));
+    if (st === 0){
+      [['in the air', [255, 255, 255]], ['at the glass', PANE_SEEN], ['in the ball', ballColor(TOY.ball.x, TOY.ball.y)]].forEach(([n, c], k) => {
+        mix.append(el('circle', { cx: 40 + k * 150, cy: 40, r: 17, fill: rgb(c), stroke: INK3 }));
+        tx(40 + k * 150, 90, n, `font-size:16px;fill:${INK2}`);
+      });
+    } else {
+      const defs = el('defs'); defs.innerHTML = `<marker id="ngg-m" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0 L9 4.5 L0 9 z" fill="${INK3}"/></marker>`; mix.append(defs);
+      const arrow = (x1, x2) => mix.append(el('line', { x1, x2: x2 - 4, y1: 40, y2: 40, stroke: INK3, 'stroke-width': 1.6, 'marker-end': 'url(#ngg-m)' }));
+      CORN.forEach(([p, q, w], k) => { sw(k * 50, 20, G.at(p, q), 40, st === 2 ? T : INK3, st === 2 ? 2.5 : 1); tx(k * 50 + 20, 84, Math.round(100 * w) + '%', `font-size:16px;fill:${INK}`); });
+      arrow(200, 228); sw(232, 18, G.lerp(P[0], P[1]), 44, INK, 1.5); tx(254, 84, 'mixed', `font-size:16px;fill:${INK2}`);
+      arrow(284, 312);
+      const NX = [318, 346, 374]; NX.forEach((x, c) => [-14, 0, 14].forEach(dy => { if (c < 2) NX.slice(c + 1, c + 2).forEach(x2 => [-14, 0, 14].forEach(d2 => mix.append(el('line', { x1: x, y1: 40 + dy, x2, y2: 40 + d2, stroke: T, 'stroke-opacity': .3 })))); mix.append(el('circle', { cx: x, cy: 40 + dy, r: 4, fill: T })); }));
+      arrow(386, 412); tx(416, 34, 'density,', `font-size:16px;fill:${INK}`, 'start'); tx(416, 54, 'color', `font-size:16px;fill:${INK}`, 'start');
+      if (st === 2) tx(0, 118, 'Only these 4 corners and the tiny network change.', `font-size:16px;fill:${T};font-weight:600`, 'start');
     }
-    const corners = (n + 1) ** 2;
-    $('#hh-count').innerHTML = `<b>${corners.toLocaleString('en-US')}</b> corners, <b>100</b> table entries.<br>` +
-      (corners <= T ? 'Every corner has its own entry.' : `About <b>${(corners / T).toFixed(1)}</b> corners per entry; <b class="t">${shared}</b> share the red one.`);
-    $('#hh-text').innerHTML = TEXT[st];
-    pressTab('#hh-seg', st);
+    $('#ngg-text').innerHTML = TEXT[st];
   }
-  stepTabs('#hh-seg');
+  hooks['s-ngp-grid'] = draw;
+  draw(0);
+})();
+
+
+/* ---------------- Instant-NGP: what one grid can show, with large, medium and small cells ---------------- */
+(function(){
+  const top = $('#ngl-top'); if (!top) return;
+  const CS = [1.5, 0.5, 0.15], W = 600, H = 430, pics = [];
+  const TEXT = [
+    '<p>Between its corners a grid only mixes, so it can only show what is larger than its cells. With large cells the ball is a soft blob and the thin glass almost disappears.</p>',
+    '<p>With smaller cells the shapes appear. In 3D, every time the cells get half as big there are 8 times as many corners.</p>',
+    '<p>Small cells give a sharp picture, but one such grid of a real scene has billions of corners. Instant-NGP uses 16 grids from coarse to fine and passes what all 16 read to the tiny network: the coarse ones give the shape, the fine ones the detail.</p>',
+  ];
+  function draw(st){
+    const { X, Y, sx } = topView(top, W, H, { shapes: false });
+    const G = toyGrid(CS[st]);
+    pics[st] = pics[st] || paintTop(top, W, H, sx, G.lerp); putPicture(top, pics[st], W, H);
+    if (st < 2){
+      const RULE = css('--ink-3');
+      for (let k = 0; k <= G.nx; k++) top.append(el('line', { x1: X(G.cx(k)), x2: X(G.cx(k)), y1: 0, y2: H, stroke: RULE, 'stroke-opacity': .35 }));
+      for (let k = 0; k <= G.ny; k++) top.append(el('line', { x1: 0, x2: W, y1: Y(G.cy(k)), y2: Y(G.cy(k)), stroke: RULE, 'stroke-opacity': .35 }));
+      for (let q = 0; q <= G.ny; q++) for (let p = 0; p <= G.nx; p++) top.append(el('circle', { cx: X(G.cx(p)), cy: Y(G.cy(q)), r: st ? 2.6 : 5, fill: rgb(G.at(p, q)), stroke: RULE, 'stroke-width': .7 }));
+    }
+    $$('#ngl-tab tr').forEach((r, k) => r.classList.toggle('on', k === st));
+    $('#ngl-text').innerHTML = TEXT[st];
+  }
+  hooks['s-ngp-levels'] = draw;
+  draw(0);
+})();
+
+
+/* ---------------- Instant-NGP: a fine grid hashed into a table of 128 slots ---------------- */
+(function(){
+  const top = $('#ngh-top'), tab = $('#ngh-table'); if (!top) return;
+  const G = toyGrid(0.25), TT = 128, W = 600, H = 430;
+  // the paper's spatial hash (Eq. 4) in 2D: pi_1 = 1 and pi_2 = 2654435761, on 32-bit unsigned integers
+  const slot = (i, j) => ((i ^ Math.imul(j, 2654435761 | 0)) >>> 0) % TT;
+  const near = (i, j) => { const x = G.cx(i), y = G.cy(j), h = G.c * 0.5; for (const dx of [-h, 0, h]) for (const dy of [-h, 0, h]) if (field(x + dx, y + dy).what !== 'air') return true; return false; };
+  const C = []; for (let j = 0; j <= G.ny; j++) for (let i = 0; i <= G.nx; i++) C.push({ i, j, s: slot(i, j), n: near(i, j) });
+  const use = new Array(TT).fill(0), nearUse = new Array(TT).fill(0);
+  C.forEach(c => { use[c.s]++; if (c.n) nearUse[c.s]++; });
+  // the red corner: at the front of the ball, alone with its slot among the corners near anything, with many sharers
+  const b = TOY.ball;
+  const sel = C.filter(c => c.n && field(G.cx(c.i), G.cy(c.j)).what === 'ball' && G.cx(c.i) < b.x - 0.6 && nearUse[c.s] === 1)
+    .sort((u, v) => use[v.s] - use[u.s] || Math.abs(G.cy(u.j) - b.y) - Math.abs(G.cy(v.j) - b.y))[0];
+  const K = use[sel.s];
+  let pic = null;
+  const TEXT = [
+    '<p>A fine grid has far too many corners to store. Each grid therefore gets a table with a fixed number of slots, and a formula, the hash, sends every corner to a slot. Many corners then share one slot.</p>',
+    `<p>The red corner sits at the front of the ball. The ${K - 1} circled corners land in the same slot. They are spread over the whole scene, and all of them read the same two numbers.</p>`,
+    '<p>Only the red corner is near something; the others are in empty air, which no photo ever shows. Training fills the slot with what the red corner needs, and the coarse grids, which have no sharing, help the network tell the rest apart.</p>',
+  ];
+  const COUNT = [
+    `<b>${C.length.toLocaleString('en-US')}</b> corners, <b>${TT}</b> slots: about ${(C.length / TT).toFixed(1)} corners per slot.`,
+    `<b class="t">${K}</b> corners share the red slot.`,
+    `<b class="t">${K}</b> corners share the red slot: <b>1</b> near the ball, <b>${K - 1}</b> in empty air.`,
+  ];
+  function draw(st){
+    const T = css('--tuned'), INK = css('--ink'), INK3 = css('--ink-3'), RULE = css('--rule');
+    const { X, Y, sx } = topView(top, W, H, { shapes: false, labels: false });
+    pic = pic || paintTop(top, W, H, sx, faded(0.35)); putPicture(top, pic, W, H);
+    for (let k = 0; k <= G.nx; k++) top.append(el('line', { x1: X(G.cx(k)), x2: X(G.cx(k)), y1: 0, y2: H, stroke: RULE, 'stroke-opacity': .7 }));
+    for (let k = 0; k <= G.ny; k++) top.append(el('line', { x1: 0, x2: W, y1: Y(G.cy(k)), y2: Y(G.cy(k)), stroke: RULE, 'stroke-opacity': .7 }));
+    C.forEach(c => top.append(el('circle', { cx: X(G.cx(c.i)), cy: Y(G.cy(c.j)), r: 1.9, fill: c.n ? INK : INK3, 'fill-opacity': c.n ? .8 : .55 })));
+    if (st >= 1){
+      C.forEach(c => { if (c.s === sel.s && c !== sel) top.append(el('circle', { cx: X(G.cx(c.i)), cy: Y(G.cy(c.j)), r: 8, fill: 'none', stroke: st === 2 ? INK3 : T, 'stroke-width': 2.2 })); });
+      top.append(el('circle', { cx: X(G.cx(sel.i)), cy: Y(G.cy(sel.j)), r: 7, fill: T, stroke: css('--white'), 'stroke-width': 1.5 }));
+    }
+    tab.innerHTML = '';
+    const mx = Math.max(...use), cw = 26.8;
+    for (let k = 0; k < TT; k++) tab.append(el('rect', { x: (k % 16) * cw + 1.5, y: Math.floor(k / 16) * cw + 1.5, width: 24, height: 24, rx: 2, fill: INK, 'fill-opacity': 0.05 + 0.5 * use[k] / mx, stroke: st >= 1 && k === sel.s ? T : 'none', 'stroke-width': 3 }));
+    $('#ngh-text').innerHTML = TEXT[st];
+    $('#ngh-count').innerHTML = COUNT[st];
+  }
   hooks['s-ngp-hash'] = draw;
+  draw(0);
+})();
+
+
+/* ---------------- Instant-NGP: skipping empty space along one ray ---------------- */
+(function(){
+  const top = $('#ngk-top'), bars = $('#ngk-bars'); if (!top) return;
+  const a = pixAngle(22), TS = stratified(64, 3), CELL = 0.5, W = 600, H = 430, x0 = -0.75, y0 = -3.4;
+  const occ = (i, j) => { for (let q = 0; q < 5; q++) for (let p = 0; p < 5; p++) if (field(x0 + (i + (p + .5) / 5) * CELL, y0 + (j + (q + .5) / 5) * CELL).what !== 'air') return true; return false; };
+  const cells = []; for (let j = 0; j < 14; j++) for (let i = 0; i < 21; i++) if (occ(i, j)) cells.push([i, j]);
+  const isOcc = (x, y) => cells.some(([i, j]) => Math.floor((x - x0) / CELL) === i && Math.floor((y - y0) / CELL) === j);
+  const TN = []; for (let t = TOY.near; t < TOY.far; t += 0.14) if (isOcc(t * Math.cos(a), t * Math.sin(a))) TN.push(t);
+  const TEXT = [
+    '<p>NeRF spreads its points over the whole ray, 64 and then 192 more, and sends each one through a network of 600,000 weights, even in empty air.</p>',
+    '<p>Instant-NGP keeps a coarse map of the cells that hold anything, shaded, updated during training. A ray skips the empty cells and takes points only inside shaded ones: 3 to 26 per ray in the paper. With the tiny network that is about 600 times less arithmetic.</p>',
+  ];
+  function draw(st){
+    const T = css('--tuned'), INK = css('--ink'), F = css('--frozen');
+    const { X, Y, sx } = topView(top, W, H, { labels: true });
+    if (st === 1) cells.forEach(([i, j]) => top.insertBefore(el('rect', { x: X(x0 + i * CELL), y: Y(y0 + (j + 1) * CELL), width: CELL * sx, height: CELL * sx, fill: T, 'fill-opacity': .12, stroke: css('--tuned-line') }), top.children[2]));
+    rayOf(top, X, Y, a, F);
+    (st === 0 ? TS : TN).forEach(t => top.append(el('circle', { cx: X(t * Math.cos(a)), cy: Y(t * Math.sin(a)), r: 3, fill: st ? T : INK, 'fill-opacity': .85 })));
+    $('#ngk-text').innerHTML = TEXT[st];
+  }
+  // multiply-adds per ray: NeRF 256 points x 593,924 weights; Instant-NGP at most 25.7 points x about 10,000 weights
+  (function(){
+    const T = css('--tuned'), INK = css('--ink'), INK2 = css('--ink-2'), INK3 = css('--ink-3');
+    const NERF = 256 * 593924, NGP = 25.7 * 10000, L = 120, R = 460, Xv = v => L + (R - L) * v / NERF;
+    bars.append(el('text', { x: L, y: 16, style: 'font-size:16px;fill:' + INK3 }, 'Multiply-adds in the network, per ray'));
+    [['NeRF', NERF, INK, 'about 152 million', '256 points × 594,000 weights'], ['Instant-NGP', NGP, T, 'at most about 0.26 million', '3 to 26 points × 10,000 weights']].forEach(([n, v, col, lab, how], k) => {
+      const y = 62 + k * 92;
+      bars.append(el('text', { x: L - 12, y: y + 6, 'text-anchor': 'end', style: `font-size:18px;font-weight:600;fill:${col}` }, n));
+      bars.append(el('rect', { x: L, y: y - 13, width: Math.max(2, Xv(v) - L), height: 26, fill: col }));
+      if (k === 0) bars.append(el('text', { x: Xv(v) - 8, y: y + 6, 'text-anchor': 'end', style: 'font-size:17px;font-weight:600;fill:#fff' }, lab));
+      else bars.append(el('text', { x: L + 10, y: y + 6, style: `font-size:17px;font-weight:600;fill:${col}` }, lab));
+      bars.append(el('text', { x: L, y: y + 36, style: 'font-size:16px;fill:' + INK2 }, how));
+    });
+  })();
+  hooks['s-ngp-skip'] = draw;
   draw(0);
 })();
 
@@ -2512,34 +2798,6 @@ function barChart(host, rows, opt){
   stepTabs('#ngr-seg');
   hooks['s-ngp-results'] = draw;
   draw(0);
-})();
-
-/* ---------------- Instant-NGP: compute per ray, then parameters ---------------- */
-(function(){
-  const svg = $('#ngw-svg'); if (!svg) return;
-  const T = css('--tuned'), INK = css('--ink'), INK2 = css('--ink-2'), INK3 = css('--ink-3');
-  // multiply-adds per ray: NeRF 256 points x 593,924 weights; Instant-NGP at most 25.7 points x about 10,000 weights
-  const NERF = 256 * 593924, NGP = 25.7 * 10000, L = 150, R = 570, X = v => L + (R - L) * v / 160e6;
-  svg.append(el('text', { x: L, y: 22, style: 'font-size:16px;fill:' + INK3 }, 'Multiply-adds in the network, per ray'));
-  [0, 40, 80, 120, 160].forEach(m => { svg.append(el('line', { x1: X(m * 1e6), x2: X(m * 1e6), y1: 40, y2: 250, stroke: css('--rule') })); svg.append(el('text', { x: X(m * 1e6), y: 272, 'text-anchor': 'middle', class: 'tick' }, m + ' M')); });
-  [['NeRF', NERF, INK, 'about 152 million', '256 points × 594,000 weights'], ['Instant-NGP', NGP, T, 'at most about 0.26 million', '3 to 26 points × 10,000 weights, plus table reads']].forEach(([n, v, col, lab, how], i) => {
-    const y = 90 + i * 100;
-    svg.append(el('text', { x: L - 14, y: y + 6, 'text-anchor': 'end', style: `font-size:18px;font-weight:600;fill:${col}` }, n));
-    svg.append(el('rect', { x: L, y: y - 13, width: Math.max(2, X(v) - L), height: 26, fill: col }));
-    svg.append(el('text', { x: Math.max(L + 8, X(v) + 8), y: y + 6, style: `font-size:18px;font-weight:600;fill:${col}` }, i ? lab : ''));
-    if (!i) svg.append(el('text', { x: X(v) - 8, y: y + 6, 'text-anchor': 'end', style: 'font-size:18px;font-weight:600;fill:#fff' }, lab));
-    svg.append(el('text', { x: L, y: y + 38, style: 'font-size:16px;fill:' + INK2 }, how));
-  });
-  // parameters, squares by area: NeRF 2 x 593,924 weights; Instant-NGP 12.6 million table entries + 10,000 weights (Fig. 2f)
-  const side = 330, ns = side * Math.sqrt(2 * 593924 / 12.61e6);
-  $('#ngw-sq').innerHTML = `<i class="sq" style="left:0;width:${ns}px;height:${ns}px;background:var(--ink)"></i><i class="sq nf" style="left:${ns + 60}px;width:${side}px;height:${side}px"></i>` +
-    `<div class="ml"><b>1.2 million</b><br>NeRF, weights</div><div class="ml nf" style="left:${ns + 60}px"><b>12.6 million</b><br>Instant-NGP, table entries and weights</div>`;
-  const EXPL = [
-    '<p>NeRF sends 256 points of every ray through a network of about 600,000 weights. Instant-NGP keeps a coarse grid of occupied cells, so a ray needs only 3 to 26 points, and each point costs a few table reads and a network of 10,000 weights.</p><p>That is about 600 times less arithmetic per ray.</p>',
-    '<p>The price is memory. The tables hold 12.6 million learned entries, ten times the number of NeRF\'s weights.</p><p>It also relies on hand-written GPU code that keeps the whole tiny network in the chip\'s fastest memory, and it still renders by marching rays.</p>',
-  ];
-  hooks['s-ngp-why'] = s => { $('#ngw-0').classList.toggle('off', s !== 0); $('#ngw-1').classList.toggle('off', s !== 1); $('#ngw-expl').innerHTML = EXPL[s]; };
-  hooks['s-ngp-why'](0);
 })();
 
 /* ---------------- 3DGS: one Gaussian ---------------- */
@@ -2598,61 +2856,181 @@ function barChart(host, rows, opt){
   draw(0);
 })();
 
-/* ---------------- 3DGS: the toy scene as 9 Gaussians, sorted and blended along one ray ---------------- */
+/* ---------------- 3DGS: the toy scene as Gaussians, their splats on the camera's image row ---------------- */
+// 4 thin orange Gaussians for the glass and 19 blue ones for the ball (world units; sx, sy = standard deviations, r = turn)
+const GS_TOY = (() => {
+  const p = TOY.pane, b = TOY.ball, out = [];
+  [-2.15, -1.66, -1.17, -0.68, -0.19, 0.3].forEach(y => out.push({ x: 3.5, y, sx: 0.13, sy: 0.25, r: 0, o: 0.5, c: p.c }));
+  out.push({ x: b.x, y: b.y, sx: 0.5, sy: 0.5, r: 0, o: 0.95, c: ballColor(b.x, b.y) });
+  for (let k = 0; k < 9; k++){ const q = k * 2 * Math.PI / 9 + 0.3, x = b.x + 0.95 * Math.cos(q), y = b.y + 0.95 * Math.sin(q); out.push({ x, y, sx: 0.42, sy: 0.3, r: q + Math.PI / 2, o: 0.95, c: ballColor(x, y) }); }
+  return out;
+})();
+// projection onto the screen coordinate u = y / x (camera at the origin looking along +x): mean and variance of the splat
+function gsSplat(g){
+  const c = Math.cos(g.r), s = Math.sin(g.r), A = g.sx * g.sx, B = g.sy * g.sy;
+  const s11 = c * c * A + s * s * B, s12 = c * s * (A - B), s22 = s * s * A + c * c * B, J0 = -g.y / (g.x * g.x), J1 = 1 / g.x;
+  return { u: g.y / g.x, v: J0 * J0 * s11 + 2 * J0 * J1 * s12 + J1 * J1 * s22, d: g.x };
+}
+const gsAlpha = (g, sp, u) => Math.min(0.99, g.o * Math.exp(-0.5 * (u - sp.u) ** 2 / sp.v));
+const pixU = i => Math.tan(pixAngle(i));
+// one pixel: the splats that cover it, nearest first, blended front to back (Kerbl et al. Eq. 3)
+function gsPixel(list, u){
+  const order = list.map((g, k) => ({ g, k, sp: gsSplat(g) })).sort((p, q) => p.sp.d - q.sp.d);
+  let T = 1; const C = [0, 0, 0], hits = [];
+  order.forEach(o => { if (T < 0.01) return; const al = gsAlpha(o.g, o.sp, u); if (al < 0.04) return; hits.push({ ...o, al, T, w: al * T }); for (let k = 0; k < 3; k++) C[k] += o.g.c[k] * al * T; T *= 1 - al; });
+  for (let k = 0; k < 3; k++) C[k] += T * TOY.bg[k];
+  return { C, hits, T };
+}
+// soft ellipses in a top view; ids must be unique per svg
+function gsDraw(svg, list, X, Y, sx, opt = {}){
+  const defs = el('defs'), id = svg.id + '-gg' + (gsDraw.n = (gsDraw.n || 0) + 1) + '-';
+  defs.innerHTML = list.map((g, k) => `<radialGradient id="${id}${k}"><stop offset="0" stop-color="${rgb(g.c)}" stop-opacity="${g.o}"/><stop offset=".4" stop-color="${rgb(g.c)}" stop-opacity="${(g.o * .61).toFixed(2)}"/><stop offset=".8" stop-color="${rgb(g.c)}" stop-opacity="${(g.o * .14).toFixed(2)}"/><stop offset="1" stop-color="${rgb(g.c)}" stop-opacity="0"/></radialGradient>`).join('');
+  svg.append(defs);
+  list.forEach((g, k) => svg.append(el('ellipse', { cx: X(g.x), cy: Y(g.y), rx: 2.5 * g.sx * sx, ry: 2.5 * g.sy * sx, fill: `url(#${id}${k})`, opacity: opt.fade || 1, transform: `rotate(${(-g.r * 180 / Math.PI).toFixed(1)} ${X(g.x)} ${Y(g.y)})` })));
+}
+function gsRing(svg, g, X, Y, sx, col, dash){ svg.append(el('ellipse', { cx: X(g.x), cy: Y(g.y), rx: 2 * g.sx * sx, ry: 2 * g.sy * sx, fill: 'none', stroke: col, 'stroke-width': 2, 'stroke-dasharray': dash || 'none', transform: `rotate(${(-g.r * 180 / Math.PI).toFixed(1)} ${X(g.x)} ${Y(g.y)})` })); }
+
+/* ---------------- 3DGS: the idea, rays and points against a list of Gaussians ---------------- */
 (function(){
-  const top = $('#gr-top'), plot = $('#gr-plot'); if (!top) return;
-  const p = TOY.pane, b = TOY.ball;
-  const G = [
-    ...[-1.95, -0.95, 0.05].map(y => ({ x: 3.5, y, sx: 0.13, sy: 0.55, o: 0.55, c: p.c })),
-    { x: b.x, y: b.y, sx: 0.6, sy: 0.6, o: 0.97, c: ballColor(b.x, b.y) },
-    ...[0, 1, 2, 3, 4, 5].map(k => { const a = k * Math.PI / 3 + Math.PI / 6, x = b.x + 0.95 * Math.cos(a), y = b.y + 0.95 * Math.sin(a); return { x, y, sx: 0.45, sy: 0.45, o: 0.95, c: ballColor(x, y) }; }),
-  ];
-  // where a ray from the camera at angle a passes closest to each Gaussian (in its own metric), and the alpha there
-  function crossings(a){
-    const dx = Math.cos(a), dy = Math.sin(a);
-    return G.map((g, i) => {
-      const ix = 1 / (g.sx * g.sx), iy = 1 / (g.sy * g.sy);
-      const t = (dx * ix * g.x + dy * iy * g.y) / (dx * dx * ix + dy * dy * iy);
-      const ex = t * dx - g.x, ey = t * dy - g.y, m2 = ex * ex * ix + ey * ey * iy;
-      return { i, t, al: g.o * Math.exp(-m2 / 2), c: g.c };
-    }).filter(h => h.al > 0.08 && h.t > 0).sort((u, v) => u.t - v.t);
-  }
-  function blend(hits){ let T = 1; const C = [0, 0, 0]; hits.forEach(h => { h.T = T; h.w = T * h.al; for (let k = 0; k < 3; k++) C[k] += h.w * h.c[k]; T *= 1 - h.al; }); for (let k = 0; k < 3; k++) C[k] += T * TOY.bg[k]; return C; }
-  const ROWG = Array.from({ length: NPX }, (_, i) => blend(crossings(pixAngle(i))));
-  $('#gr-px').innerHTML = ROWG.map((c, i) => `<i style="background:${rgb(c)}" class="${i === 22 ? 'sel' : ''}"></i>`).join('');
+  const a = $('#gsi-nerf'), b = $('#gsi-gs'); if (!a) return;
+  const INK = css('--ink'), F = css('--frozen');
+  const v1 = topView(a, 540, 300, { labels: true });
+  [2, 8, 14, 20, 26, 32, 38, 44].forEach((i, k) => { const an = pixAngle(i); rayOf(a, v1.X, v1.Y, an, css('--frozen-line'), 1.2); stratified(22, k + 1).forEach(t => a.append(el('circle', { cx: v1.X(t * Math.cos(an)), cy: v1.Y(t * Math.sin(an)), r: 2, fill: INK, 'fill-opacity': .7 }))); });
+  const v2 = topView(b, 540, 300, { shapes: false, labels: true });
+  gsDraw(b, GS_TOY, v2.X, v2.Y, v2.sx);
+})();
+
+/* ---------------- 3DGS: projecting the Gaussians, one splat, all splats, the image row ---------------- */
+(function(){
+  const top = $('#gsp-top'), plot = $('#gsp-plot'); if (!top) return;
+  const SPL = GS_TOY.map(g => gsSplat(g)), U = Math.tan(TOY.fov);
+  // the Gaussian shown alone: the ball's nearest one
+  const ONE = GS_TOY.map((g, k) => k).filter(k => k >= 4).sort((p, q) => GS_TOY[p].x - GS_TOY[q].x)[0];
+  const ROWS = Array.from({ length: NPX }, (_, i) => gsPixel(GS_TOY, pixU(i)).C);
   const TEXT = [
-    '<p>The toy scene again, now stored as nine Gaussians instead of a network: three thin orange ones for the pane and six blue ones for the ball. The pixel\'s ray crosses a few of them.</p>',
-    '<p>The Gaussians are sorted by distance from the camera, once for each 16 × 16-pixel tile rather than point by point along each ray. Each one blocks most light where the ray passes close to its center.</p>',
-    '<p>Blending front to back is the same sum as in NeRF, color times opacity times the light still getting through. No network is queried, since every term is read straight from a Gaussian.</p>',
+    '<p>Each Gaussian is projected onto the camera\'s screen, where it becomes a soft 2D patch, the splat. Our toy scene is flat, so the screen is one row of pixels and the splat is a bump: tall where the Gaussian blocks much light, wide when it is near or large.</p>',
+    '<p>Every Gaussian is projected the same way, each one on its own, like the triangles of a video game. Graphics cards are built to do this for millions of them per frame.</p>',
+    '<p>Blending the bumps at every pixel gives the image row. It shows the same glass, ball and background as NeRF\'s row, with softer edges, but no network was asked and no ray was marched.</p>',
   ];
   function draw(st){
-    const a = pixAngle(22), hits = crossings(a), C = blend(hits);
-    const { X, Y, sx } = topView(top, 540, 300, { shapes: false });
-    const defs = el('defs'); defs.innerHTML = G.map((g, i) => `<radialGradient id="grg${i}"><stop offset="0" stop-color="${rgb(g.c)}" stop-opacity="${g.o}"/><stop offset=".4" stop-color="${rgb(g.c)}" stop-opacity="${(g.o * .61).toFixed(2)}"/><stop offset=".8" stop-color="${rgb(g.c)}" stop-opacity="${(g.o * .14).toFixed(2)}"/><stop offset="1" stop-color="${rgb(g.c)}" stop-opacity="0"/></radialGradient>`).join('');
-    top.append(defs);
-    G.forEach((g, i) => top.append(el('ellipse', { cx: X(g.x), cy: Y(g.y), rx: 2.5 * g.sx * sx, ry: 2.5 * g.sy * sx, fill: `url(#grg${i})` })));
-    const end = TOY.far + .2;
-    top.append(el('line', { x1: X(0) + 6, y1: Y(0), x2: X(end * Math.cos(a)), y2: Y(end * Math.sin(a)), stroke: css('--frozen'), 'stroke-width': 1.6 }));
-    if (st >= 1) hits.forEach((h, k) => { const g = G[h.i]; top.append(el('circle', { cx: X(g.x), cy: Y(g.y), r: 11, fill: css('--white'), stroke: css('--ink'), 'stroke-width': 1.2 })); top.append(el('text', { x: X(g.x), y: Y(g.y) + 5, 'text-anchor': 'middle', style: 'font-size:14px;font-weight:600;fill:' + css('--ink') }, String(k + 1))); });
-    const g = rayLanes(plot);
-    const l1 = g.lane(6, 70, 'opacity α', 'where the ray passes', st >= 1), l2 = g.lane(98, 70, 'light that', 'gets through', st >= 2), l3 = g.lane(190, 70, 'contribution', 'α × light', st >= 2);
-    // Gaussians at the same depth (the pane's, the ball's sides) are drawn side by side so their bars stay apart
-    let lastX = -1e9; hits.forEach(h => { h.x = Math.max(g.tx(h.t), lastX + 11); lastX = h.x; });
-    hits.forEach((h, k) => {
-      const x = h.x;
-      plot.append(el('circle', { cx: x, cy: 274, r: 4, fill: g.INK }));
-      l1.append(el('line', { x1: x, x2: x, y1: 76, y2: 76 - 66 * h.al, stroke: rgb(h.c), 'stroke-width': 6 }));
-      l1.append(el('text', { x, y: 76 - 66 * h.al - 6, 'text-anchor': 'middle', class: 'tick', style: 'font-size:13px' }, String(k + 1)));
-      l3.append(el('line', { x1: x, x2: x, y1: 260, y2: 260 - 66 * h.w, stroke: g.T, 'stroke-width': 6 }));
+    const T = css('--tuned'), INK = css('--ink'), INK3 = css('--ink-3'), F = css('--frozen');
+    const { X, Y, sx } = topView(top, 540, 340, { shapes: false, labels: true });
+    gsDraw(top, GS_TOY, X, Y, sx, { fade: st === 0 ? .45 : 1 });
+    // the screen, close to the camera
+    const xs = 0.9, sc = el('line', { x1: X(xs), x2: X(xs), y1: Y(xs * U), y2: Y(-xs * U), stroke: INK, 'stroke-width': 3 });
+    top.append(sc); top.append(el('text', { x: X(xs) + 8, y: Y(xs * U) + 16, style: `font-size:15px;fill:${INK}` }, 'screen'));
+    if (st === 0){
+      const g = GS_TOY[ONE], sp = SPL[ONE], e = 2 * Math.sqrt(sp.v);
+      gsDraw(top, [g], X, Y, sx); gsRing(top, g, X, Y, sx, T);
+      [sp.u - e, sp.u + e].forEach(u => top.append(el('line', { x1: X(0), y1: Y(0), x2: X(g.x + 0.6), y2: Y((g.x + 0.6) * u), stroke: T, 'stroke-width': 1.2, 'stroke-dasharray': '5 4' })));
+      top.append(el('line', { x1: X(xs), x2: X(xs), y1: Y(xs * (sp.u - e)), y2: Y(xs * (sp.u + e)), stroke: T, 'stroke-width': 6 }));
+    }
+    plot.innerHTML = '';
+    const L = 110, R = 548, yb = 214, hb = 150, ux = u => L + (u + U) / (2 * U) * (R - L);
+    const title = s => plot.append(el('text', { x: L, y: 20, style: `font-size:16px;fill:${INK};font-weight:600` }, s));
+    const bump = (k, op) => {
+      const g = GS_TOY[k], sp = SPL[k]; let d = `M${L} ${yb}`;
+      for (let n = 0; n <= 220; n++){ const u = -U + 2 * U * n / 220; d += `L${ux(u).toFixed(1)} ${(yb - hb * gsAlpha(g, sp, u)).toFixed(1)}`; }
+      d += `L${R} ${yb}Z`;
+      plot.append(el('path', { d, fill: rgb(g.c), 'fill-opacity': .2 * op, stroke: rgb(g.c), 'stroke-opacity': op, 'stroke-width': 2 }));
+    };
+    plot.append(el('line', { x1: L, x2: R, y1: yb, y2: yb, stroke: INK3 }));
+    plot.append(el('text', { x: L, y: yb + 20, class: 'tick' }, 'across the camera\'s image row'));
+    plot.append(el('text', { x: L - 12, y: yb - hb + 5, 'text-anchor': 'end', class: 'tick' }, 'opaque'));
+    plot.append(el('text', { x: L - 12, y: yb + 5, 'text-anchor': 'end', class: 'tick' }, 'clear'));
+    if (st === 0){ title('One Gaussian on the screen: a soft bump, the splat'); bump(ONE, 1); }
+    else {
+      title(st === 1 ? 'Every Gaussian becomes a bump' : 'The image row, blended from the bumps');
+      GS_TOY.map((g, k) => k).sort((p, q) => SPL[q].d - SPL[p].d).forEach(k => bump(k, st === 2 ? .35 : 1));
+    }
+    if (st === 2){
+      const pw = (R - L) / NPX;
+      [['Gaussians', ROWS, 236], ['NeRF', ROW, 274]].forEach(([n, row, y]) => {
+        plot.append(el('text', { x: L - 12, y: y + 19, 'text-anchor': 'end', style: `font-size:16px;fill:${INK}` }, n));
+        row.forEach((c, i) => plot.append(el('rect', { x: L + i * pw, y, width: pw + .5, height: 28, fill: rgb(c) })));
+        plot.append(el('rect', { x: L, y, width: R - L, height: 28, fill: 'none', stroke: css('--rule') }));
+      });
+      plot.append(el('text', { x: L, y: 322, class: 'tick' }, 'the NeRF row is the one from the rendering slide'));
+    }
+    $('#gsp-text').innerHTML = TEXT[st];
+  }
+  hooks['s-gs-splat'] = draw;
+  draw(0);
+})();
+
+/* ---------------- 3DGS: one pixel, its splats sorted and blended ---------------- */
+(function(){
+  const top = $('#gr-top'), plot = $('#gr-plot'); if (!top) return;
+  const PX = 22, a = pixAngle(PX), R0 = gsPixel(GS_TOY, pixU(PX));
+  const TEXT = [
+    '<p>Take one pixel. The splats that cover it are sorted, nearest first; the GPU does one sort for each 16 × 16 tile of pixels. A splat\'s opacity α at this pixel is its own opacity, weakened by how far the pixel is from the splat\'s center.</p>',
+    '<p>The light still getting through starts at 1 and shrinks behind every Gaussian, exactly like <span class="m">T</span> in NeRF. Once almost no light gets through, the Gaussians behind are skipped.</p>',
+    '<p>Each Gaussian adds its color × α × the light still getting through, and the sum is the pixel. It is NeRF\'s rendering sum, but every term is read from a Gaussian instead of asked from a network.</p>',
+  ];
+  function draw(st){
+    const T = css('--tuned'), INK = css('--ink'), INK2 = css('--ink-2'), INK3 = css('--ink-3'), F = css('--frozen'), RULE = css('--rule');
+    const { X, Y, sx } = topView(top, 540, 340, { shapes: false, labels: true });
+    gsDraw(top, GS_TOY, X, Y, sx);
+    rayOf(top, X, Y, a, F, 1.8);
+    R0.hits.forEach((h, n) => { top.append(el('circle', { cx: X(h.g.x), cy: Y(h.g.y), r: 11, fill: css('--white'), stroke: INK, 'stroke-width': 1.2 })); top.append(el('text', { x: X(h.g.x), y: Y(h.g.y) + 5, 'text-anchor': 'middle', style: `font-size:14px;font-weight:600;fill:${INK}` }, String(n + 1))); });
+    plot.innerHTML = '';
+    const COLS = [[100, 'opacity α', INK2, h => h.al], [250, 'light getting through', F, h => h.T], [408, 'contribution', T, h => h.w]].slice(0, st + 1);
+    plot.append(el('text', { x: 0, y: 20, style: `font-size:16px;fill:${INK};font-weight:600` }, 'nearest first'));
+    COLS.forEach(([x, n]) => plot.append(el('text', { x, y: 20, style: `font-size:16px;fill:${INK};font-weight:600` }, n)));
+    const rh = Math.min(30, 224 / R0.hits.length);
+    R0.hits.forEach((h, n) => {
+      const y = 36 + n * rh, bh = rh - 10;
+      plot.append(el('text', { x: 6, y: y + bh / 2 + 6, style: `font-size:16px;fill:${INK}` }, String(n + 1)));
+      plot.append(el('rect', { x: 32, y, width: 40, height: bh, rx: 2, fill: rgb(h.g.c) }));
+      COLS.forEach(([x, , col, f]) => {
+        plot.append(el('rect', { x, y, width: 90, height: bh, fill: RULE, 'fill-opacity': .45 }));
+        plot.append(el('rect', { x, y, width: 90 * f(h), height: bh, fill: col }));
+        plot.append(el('text', { x: x + 96, y: y + bh / 2 + 5, class: 'tick', style: 'font-size:15px' }, f(h).toFixed(2)));
+      });
     });
-    let d = `M${g.L} ${168 - 66}`; hits.forEach(h => { const x = h.x; d += `L${x} ${168 - 66 * h.T}L${x} ${168 - 66 * h.T * (1 - h.al)}`; }); d += `L${g.R} ${168 - 66 * (hits.length ? hits[hits.length - 1].T * (1 - hits[hits.length - 1].al) : 1)}`;
-    l2.append(el('path', { d, fill: 'none', stroke: g.F, 'stroke-width': 2.4 }));
-    plot.append(el('text', { x: g.L, y: 296, class: 'tick', style: 'font-size:14px' }, 'near'));
-    plot.append(el('text', { x: g.R, y: 296, 'text-anchor': 'end', class: 'tick', style: 'font-size:14px' }, 'far, in sorted order'));
-    $('#gr-swatch').style.background = rgb(C);
+    $('#gr-swatch').style.background = rgb(R0.C);
     $('#gr-text').innerHTML = TEXT[st];
   }
   hooks['s-gs-render'] = draw;
+  draw(0);
+})();
+
+/* ---------------- 3DGS: training, from the COLMAP points to a covered scene ---------------- */
+(function(){
+  const top = $('#gst-top'); if (!top) return;
+  const p = TOY.pane, b = TOY.ball, PC = p.c, BC = (x, y) => ballColor(x, y);
+  const G = (x, y, sx, sy, r, o, c) => ({ x, y, sx, sy, r, o, c: c || BC(x, y) });
+  const ring = (n, rad, f) => Array.from({ length: n }, (_, k) => { const q = k * 2 * Math.PI / n; return f(b.x + rad * Math.cos(q), b.y + rad * Math.sin(q), q); });
+  const S0 = [...[-2.2, -1.5, -0.8, -0.1].map(y => G(3.3, y, .12, .12, 0, .9, PC)), ...ring(12, 1.5, (x, y) => G(x, y, .12, .12, 0, .9))];
+  const PANE1 = [G(3.5, -1.95, .12, .42, 0, .55, PC), G(3.5, -1.2, .12, .38, 0, .55, PC), G(3.5, -0.5, .12, .3, 0, .55, PC)];
+  const SMALL = G(3.5, 0.05, .1, .12, 0, .55, PC), BIG = G(6.75, 0.25, .95, .95, 0, .55);
+  const RING1 = ring(10, 1.05, (x, y, q) => G(x, y, .3, .45, q, .9));
+  const S1 = [...PANE1, SMALL, ...RING1, BIG];
+  const CLONE = G(3.5, 0.4, .1, .12, 0, .55, PC), B1 = G(6.4, 0.6, .55, .55, 0, .7), B2 = G(7.05, 0.0, .55, .55, 0, .7);
+  const S2 = [...PANE1, SMALL, CLONE, ...RING1, B1, B2];
+  const S3 = [...Array.from({ length: 7 }, (_, k) => G(3.5, -2.25 + k * 0.44, .1, .25, 0, .55, PC)),
+    ...Array.from({ length: 32 }, (_, i) => { const rr = 1.3 * Math.sqrt((i + .5) / 32), q = i * 2.39996; return G(b.x + rr * Math.cos(q), b.y + rr * Math.sin(q), .36, .26, q, .95); })];
+  const SETS = [S0, S1, S2, S3];
+  const TEXT = [
+    '<p>Training starts from the 3D points COLMAP found while computing the camera positions. Each point becomes a small round Gaussian with the color of its point. The dashed outlines are what the photos show.</p>',
+    '<p>Images are rendered and compared with the photos, as in NeRF, and gradient descent moves, stretches, turns and recolors every Gaussian. Where a region is still wrong, a Gaussian keeps being pulled hard: the top of the glass is empty, and one big Gaussian spills over the ball.</p>',
+    '<p>Every 100 steps the set itself changes. A small Gaussian that is pulled hard is cloned, and the copy moves into the gap. A large one is split into two smaller ones. Nearly transparent Gaussians are deleted.</p>',
+    '<p>After 30,000 steps a few thousand starting points have become 1 to 5 million Gaussians on the paper\'s scenes. My globe ended with about 500,000.</p>',
+  ];
+  function draw(st){
+    const T = css('--tuned'), INK3 = css('--ink-3');
+    const { X, Y, sx } = topView(top, 600, 430, { shapes: false, labels: true });
+    top.append(el('rect', { x: X(p.x0), y: Y(p.y1), width: (p.x1 - p.x0) * sx, height: (p.y1 - p.y0) * sx, fill: 'none', stroke: INK3, 'stroke-dasharray': '5 4' }));
+    top.append(el('circle', { cx: X(b.x), cy: Y(b.y), r: b.r * sx, fill: 'none', stroke: INK3, 'stroke-dasharray': '5 4' }));
+    gsDraw(top, SETS[st], X, Y, sx);
+    const defs = el('defs'); defs.innerHTML = `<marker id="gst-m" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0 L9 4.5 L0 9 z" fill="${T}"/></marker>`; top.append(defs);
+    const arrow = (x1, y1, x2, y2) => top.append(el('line', { x1: X(x1), y1: Y(y1), x2: X(x2), y2: Y(y2), stroke: T, 'stroke-width': 2.4, 'marker-end': 'url(#gst-m)' }));
+    const label = (x, y, s) => top.append(el('text', { x: X(x), y: Y(y), style: `font-size:16px;font-weight:600;fill:${T}` }, s));
+    if (st === 1){ gsRing(top, SMALL, X, Y, sx, T); gsRing(top, BIG, X, Y, sx, T); arrow(3.5, 0.25, 3.5, 0.75); arrow(7.6, -0.4, 8.5, -1.1); label(3.75, 0.85, 'pulled hard'); label(7.9, -1.55, 'pulled hard'); }
+    if (st === 2){ gsRing(top, SMALL, X, Y, sx, T); gsRing(top, CLONE, X, Y, sx, T, '4 3'); gsRing(top, B1, X, Y, sx, T); gsRing(top, B2, X, Y, sx, T); label(3.85, 0.45, 'clone'); label(7.6, 1.75, 'split'); }
+    $('#gst-text').innerHTML = TEXT[st];
+  }
+  hooks['s-gs-train'] = draw;
   draw(0);
 })();
 
@@ -2704,14 +3082,39 @@ function barChart(host, rows, opt){
   draw(0);
 })();
 
-/* ---------------- 3DGS: size, squares by area ---------------- */
+/* ---------------- storage slides: squares sized by area, left to right ---------------- */
+// items: [value label, name, MB, fill, label color]; the largest item of the step gets the full side
+function storeSquares(host, items, side){
+  const max = Math.max(...items.map(r => r[2]));
+  let x = 0, h = '';
+  items.forEach(([v, n, mb, col, tcol]) => {
+    const w = Math.max(3, side * Math.sqrt(mb / max));
+    h += `<i class="sq" style="left:${x}px;width:${w}px;height:${w}px;background:${col}"></i><div class="ml" style="left:${x}px"><b style="color:${tcol || 'var(--ink)'}">${v}</b><br>${n}</div>`;
+    x += Math.max(w, 180) + 40;
+  });
+  host.innerHTML = h;
+}
+(function(){
+  const host = $('#ngst-sq'); if (!host) return;
+  const NERF = ['5 MB', 'NeRF', 4.8, 'var(--ink)'], NGP = ['25 MB', 'Instant-NGP', 25.2, 'var(--tuned)', 'var(--tuned)'];
+  const STEPS = [[NERF, NGP], [NERF, NGP, ['over 15 GB', 'LLFF, before NeRF', 15000, 'var(--ink-3)'], ['34 GB', 'one dense grid, 2,048 per side', 34360, 'var(--token-line)']]];
+  const TEXT = [
+    '<p>Instant-NGP stores more than NeRF: 12.6 million learned numbers, ten times NeRF\'s 1.2 million weights, about 25 MB. NeRF\'s weights are shared by every point in space, while a table slot only describes the region around its corners, so many more are needed. Instant-NGP trades memory for speed.</p>',
+    '<p>It is still small next to the older ways of storing a scene. LLFF keeps a stack of image layers for every view and needs over 15 GB, and one dense grid with 2,048 cells per side would need about 34 GB. The hash tables are what keep Instant-NGP at 25 MB.</p>',
+  ];
+  hooks['s-ngp-store'] = st => { storeSquares(host, STEPS[st], 270); $('#ngst-text').innerHTML = TEXT[st]; };
+  hooks['s-ngp-store'](0);
+})();
 (function(){
   const host = $('#gsk-sq'); if (!host) return;
-  const side = 300, s = mb => side * Math.sqrt(mb / 734);
-  const items = [['8.6 MB', 'Mip-NeRF 360', 8.6, 'var(--ink)'], ['48 MB', 'Instant-NGP, big', 48, 'var(--ink-3)'], ['734 MB', 'Gaussian splatting', 734, 'var(--tuned)']];
-  let x = 0, h = '';
-  items.forEach(([v, n, mb, col]) => { const w = s(mb); h += `<i class="sq" style="left:${x}px;width:${w}px;height:${w}px;background:${col}"></i><div class="ml" style="left:${x}px"><b style="color:${col === 'var(--tuned)' ? 'var(--tuned)' : 'var(--ink)'}">${v}</b><br>${n}</div>`; x += Math.max(w, 110) + 26; });
-  host.innerHTML = h;
+  const BASE = [['8.6 MB', 'Mip-NeRF 360', 8.6, 'var(--ink)'], ['48 MB', 'Instant-NGP, big', 48, 'var(--ink-3)'], ['734 MB', 'Gaussian splatting', 734, 'var(--tuned)', 'var(--tuned)']];
+  const STEPS = [BASE, [...BASE, ['2.1 GB', 'Plenoxels, a voxel grid', 2100, 'var(--token-line)']]];
+  const TEXT = [
+    '<p>Gaussian splatting needs the most space of the three, 734 MB per scene on average. Nothing is shared: every Gaussian keeps its own 59 numbers, about 240 bytes, and a scene needs about 3 million of them. 48 of the 59 are the color, which changes with the viewing direction.</p>',
+    '<p>It is still smaller than Plenoxels, a voxel grid without a network, which needs 2.1 GB for the same scenes and looks worse. Writing everything down is what makes 134 frames per second possible. Training a large scene can need over 20 GB of GPU memory, and where the photos see little, Gaussians become blotchy.</p>',
+  ];
+  hooks['s-gs-cost'] = st => { storeSquares(host, STEPS[st], 270); $('#gsk-text').innerHTML = TEXT[st]; };
+  hooks['s-gs-cost'](0);
 })();
 
 /* ---------------- three ways: small drawings of what each method stores ---------------- */

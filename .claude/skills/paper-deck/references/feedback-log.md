@@ -77,3 +77,10 @@ These are concrete verdicts from reviewing the VPT deck (October 2026), grouped 
 - **Thought-process slides are not results.** "Capturing a whole room from inside" is a what-next question, now "Outside an object, or inside a room", after the summary.
 - **Summary of a multi-method talk = one comparison table**: method, what it stores, what its paper showed, and the measured columns, with the best value per column in red and one sentence under it.
 - **Viewer:** with the slide list open, up/down change slides (PowerPoint habit). **Live 3D viewers** need panning too (right-drag, Shift-drag, two fingers), not only turn and zoom.
+
+## NeRF deck, round 3: Instant-NGP and Gaussian splatting (November 2026)
+- **He did not understand the papers from the slides.** The old part opened each paper with its results figure (Fig. 2, Fig. 1) and used paper notation (Fig. 3 with L, b, N, F, ξ) before any idea was explained. What worked for him was an interactive explanation built on the NeRF toy scene, step by step. The rebuilt part explains first and shows the paper's figure afterwards as evidence ("Six encodings of the same scene", "Speed and quality on one test view").
+- **Reuse the toy scene for follow-up papers.** Grid corners on the same glass and ball, the same pixel 22, and the image row compared with NeRF's row. The audience already knows the picture, so only the new idea needs explaining.
+- **"Interactive is fine but some were too interactive; keep them simple enough to present."** Every explanatory slide is now driven only by arrow-key steps: no sliders, clicks or pickers needed during the talk.
+- **Storage must be explained, not just shown.** Say why a method stores more (Instant-NGP: table slots are local, while NeRF's weights are shared everywhere; Gaussians: nothing shared, 59 numbers each). Then a second step zooms out to older methods (LLFF 15 GB, a dense grid of 34 GB, Plenoxels 2.1 GB), "so it is still way more optimal than traditional methods".
+- **Title he chose for the live slide:** "My globe as Gaussian splatting, live demo".

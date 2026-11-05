@@ -84,12 +84,24 @@
   "file": "s-ngp.jpg"
  },
  {
+  "id": "s-ngp-grid",
+  "file": "s-ngp-grid.jpg"
+ },
+ {
   "id": "s-ngp-levels",
   "file": "s-ngp-levels.jpg"
  },
  {
   "id": "s-ngp-hash",
   "file": "s-ngp-hash.jpg"
+ },
+ {
+  "id": "s-ngp-skip",
+  "file": "s-ngp-skip.jpg"
+ },
+ {
+  "id": "s-ngp-fig2",
+  "file": "s-ngp-fig2.jpg"
  },
  {
   "id": "s-ngp-speed",
@@ -100,8 +112,8 @@
   "file": "s-ngp-results.jpg"
  },
  {
-  "id": "s-ngp-why",
-  "file": "s-ngp-why.jpg"
+  "id": "s-ngp-store",
+  "file": "s-ngp-store.jpg"
  },
  {
   "id": "s-gs",
@@ -112,12 +124,20 @@
   "file": "s-gs-one.jpg"
  },
  {
+  "id": "s-gs-splat",
+  "file": "s-gs-splat.jpg"
+ },
+ {
   "id": "s-gs-render",
   "file": "s-gs-render.jpg"
  },
  {
   "id": "s-gs-train",
   "file": "s-gs-train.jpg"
+ },
+ {
+  "id": "s-gs-fig1",
+  "file": "s-gs-fig1.jpg"
  },
  {
   "id": "s-gs-results",
