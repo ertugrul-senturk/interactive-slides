@@ -9,13 +9,28 @@
   },
   "wins": 8,
   "secondsPerFrame": 18,
-  "megabytes": 5
+  "numbers": 1187848,
+  "megabytes": 4.8
+ },
+ "ngp": {
+  "steps": 20000,
+  "minutes": 15,
+  "test": {
+   "psnr": 25.97,
+   "ssim": 0.895,
+   "lpips": 0.117
+  },
+  "wins": 0,
+  "secondsPerFrame": 2.57,
+  "numbers": 12207469,
+  "megabytes": 24.4
  },
  "gs": {
   "steps": 30000,
   "minutes": 31,
   "gaussians": 500482,
   "webGaussians": 365559,
+  "numbers": 29528438,
   "megabytes": 118,
   "webMegabytes": 29,
   "test": {
@@ -24,7 +39,14 @@
    "lpips": 0.05
   },
   "wins": 24,
-  "msPerFrame": 4.32
+  "msPerFrame": 6.05
+ },
+ "capture": {
+  "videoSeconds": 174,
+  "videoMB": 791,
+  "trainPhotos": 223,
+  "photosMB": 37.4,
+  "rawMB": 439
  },
  "views": 32,
  "curve": {
@@ -1002,11 +1024,13 @@
  "crop": {
   "image": "frame_00808",
   "nerf": 28.32,
+  "ngp": 27.36,
   "gs": 30.99
  },
  "low": {
   "image": "frame_03685",
   "nerf": 27.89,
+  "ngp": 25.58,
   "gs": 25.09
  },
  "orbitFrames": 120

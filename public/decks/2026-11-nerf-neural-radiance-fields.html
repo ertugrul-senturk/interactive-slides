@@ -398,15 +398,17 @@ pre.code .c{color:var(--ink-3)}
 
 /* ---------- my capture: NeRF against Gaussian splatting ---------- */
 #gr-seg{margin-bottom:4px}
-#gr-chart{grid-template-columns:220px 1fr 0 0}
-#gr-chart>div{min-height:86px} #gr-chart>.hd{min-height:0} #gr-chart .bar{height:42px} #gr-chart .nm,#gr-chart .val{font-size:20px}
+#gr-chart,#gk-chart{grid-template-columns:250px 1fr 0 0}
+.bars .nm.inp{color:var(--ink-2);font-weight:400} .bars .inp .bar{background:var(--token-line)}
+#gr-chart>div,#gk-chart>div{min-height:76px} #gr-chart>.hd,#gk-chart>.hd{min-height:0} #gr-chart .bar,#gk-chart .bar{height:38px} #gr-chart .nm,#gr-chart .val,#gk-chart .nm,#gk-chart .val{font-size:20px}
+.gcost{margin-top:40px} #gk-chart>div{min-height:66px} #gk-chart .bar{height:32px}
 .gres{margin-top:70px}
 .gres .expl{padding-top:56px}
 .gres .expl p{font-size:21px}
 .gc{position:relative;height:470px}
 .gc-panel{position:absolute;inset:0;transition:opacity .3s ease}
 .gc-panel.off{opacity:0;pointer-events:none}
-.gc-row{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+.gc-row{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
 .gc-row img{display:block;width:100%;height:auto;border:1px solid var(--rule);background:var(--white)}
 .gc-row figcaption.t{color:var(--tuned)}
 .gc-panel p{font-size:21px;line-height:1.48;margin:28px 0 0;max-width:1060px}
@@ -1086,15 +1088,15 @@ pre.code .c{color:var(--ink-3)}
 </section>
 
 <!-- ============================================================ my capture: NeRF vs Gaussian splatting, numbers -->
-<section class="slide" id="s-gres" data-title="NeRF and Gaussian splatting on my photos" data-steps="4">
-  <h2>NeRF and Gaussian splatting on my 32 held-out photos</h2>
-  <div class="seg" id="gr-seg" role="group" aria-label="Measure"><button type="button" data-v="0" aria-pressed="true">PSNR</button><button type="button" data-v="1" aria-pressed="false">SSIM</button><button type="button" data-v="2" aria-pressed="false">LPIPS</button><button type="button" data-v="3" aria-pressed="false">Training</button><button type="button" data-v="4" aria-pressed="false">One image</button></div>
+<section class="slide" id="s-gres" data-title="Image quality of the three methods on my photos" data-steps="2">
+  <h2>Image quality of the three methods on my photos</h2>
+  <div class="seg" id="gr-seg" role="group" aria-label="Measure"><button type="button" data-v="0" aria-pressed="true">PSNR</button><button type="button" data-v="1" aria-pressed="false">SSIM</button><button type="button" data-v="2" aria-pressed="false">LPIPS</button></div>
   <div class="res gres">
     <div class="bars num" id="gr-chart"></div>
     <div class="expl" id="gr-expl"></div>
   </div>
-  <p class="src">My capture. Both methods trained on the same 223 photos, cameras and masks, and scored on the same 32 held-out photos after correcting the lens to a pinhole camera (NeRF on the original photos: 27.27 dB). NeRF: 100,000 steps. Gaussian splatting: gsplat 1.5.3 (Ye et al. 2025), 30,000 steps, 500,482 Gaussians. Same laptop GPU.</p>
-  <aside class="notes">Same photos, same cameras, same masks, same held-out views, same GPU: a fair comparison on my own data. PSNR: Gaussian splatting is half a dB better on average and wins 24 of the 32 photos. SSIM, structure: 0.945 against 0.900. LPIPS, which punishes blur most, shows the biggest gap: less than half of NeRF's value. Training: nine hours against half an hour. And one image: 18 seconds against about 4 milliseconds, around four thousand times faster; the bar for Gaussian splatting is too short to see. Gaussian splatting was evaluated on images corrected to an ideal pinhole camera, because its rasteriser assumes one; to compare fairly I resampled the photos and NeRF's renders the same way, which moves NeRF from 27.27 to 27.68 dB.</aside>
+  <p class="src">My capture. All three trained on the same 223 photos, cameras and masks, and scored on the same 32 held-out photos after correcting the lens to a pinhole camera (NeRF on the original photos: 27.27 dB). NeRF: the paper's model, 100,000 steps. Instant-NGP: the paper's hash grid and networks, my implementation, 20,000 steps. Gaussian splatting: gsplat 1.5.3 (Ye et al. 2025), 30,000 steps.</p>
+  <aside class="notes" id="gr-notes"></aside>
 </section>
 
 <!-- ============================================================ my capture: NeRF vs Gaussian splatting, images -->
@@ -1105,21 +1107,35 @@ pre.code .c{color:var(--ink-3)}
       <div class="gc-row crop">
         <figure><img src="2026-11-nerf/globe/crop-photo.jpg" alt="Close-up of the photo"><figcaption>Photo</figcaption></figure>
         <figure><img src="2026-11-nerf/globe/crop-nerf.jpg" alt="Close-up of the NeRF render"><figcaption class="t" id="gc-c1"></figcaption></figure>
+        <figure><img src="2026-11-nerf/globe/crop-ngp.jpg" alt="Close-up of the Instant-NGP render"><figcaption id="gc-c5"></figcaption></figure>
         <figure><img src="2026-11-nerf/globe/crop-gs.jpg" alt="Close-up of the Gaussian splatting render"><figcaption id="gc-c2"></figcaption></figure>
       </div>
-      <p>Close up, Gaussian splatting keeps the grid lines, place names and stone edges that NeRF blurs. Its Gaussians can become as small as the detail, while NeRF's one network spreads its capacity over the whole object.</p>
+      <p id="gc-t0">Close up, Gaussian splatting keeps the grid lines and place names that NeRF blurs. Instant-NGP recovers more of them than NeRF, but its fine hash levels leave a grainy noise over the surface.</p>
     </div>
     <div class="gc-panel off" id="gc-p1">
       <div class="gc-row">
         <figure><img src="2026-11-nerf/globe/low-photo.jpg" alt="Photo taken from below the ball"><figcaption>Photo from below</figcaption></figure>
         <figure><img src="2026-11-nerf/globe/low-nerf.jpg" alt="NeRF render from below"><figcaption class="t" id="gc-c3"></figcaption></figure>
+        <figure><img src="2026-11-nerf/globe/low-ngp.jpg" alt="Instant-NGP render from below"><figcaption id="gc-c6"></figcaption></figure>
         <figure><img src="2026-11-nerf/globe/low-gs.jpg" alt="Gaussian splatting render from below, one foot broken up"><figcaption id="gc-c4"></figcaption></figure>
       </div>
-      <p>From below, where few of my photos look, the order flips. One brass foot falls apart into loose Gaussians, the blotchy look the Gaussian splatting paper names as its limitation; NeRF's smooth function fills the gap.</p>
+      <p id="gc-t1">From below, where few of my photos look, NeRF is best. Gaussian splatting breaks one brass foot into loose Gaussians, the limitation its paper names; Instant-NGP keeps the foot but leaves a faint haze around the stand.</p>
     </div>
   </div>
   <p class="src" id="gc-src"></p>
-  <aside class="notes">The numbers on the last slide are averages; here is what is behind them. Step 0, a close-up of the held-out photo where Gaussian splatting gains most: the grid lines and the small place names survive, NeRF turns them into smooth blue. That is the capacity argument: NeRF has 1.2 million weights for everything, Gaussian splatting half a million blobs that sit where the detail is. Step 1, the honest counterexample: the lowest test view, looking up under the ball. Few of my photos were taken from that low, and here NeRF is almost 3 dB better. Gaussian splatting breaks one of the ball feet into a loose cluster, exactly the stretched or blotchy Gaussians the paper lists as a limitation in poorly observed regions. A network interpolates more smoothly between views; independent blobs do not.</aside>
+  <aside class="notes" id="gc-notes">The numbers on the last slide are averages; here is what is behind them. Step 0, a close-up of the held-out photo where Gaussian splatting gains most: the grid lines and the small place names survive, NeRF turns them into smooth blue. That is the capacity argument: NeRF has 1.2 million weights for everything, Gaussian splatting half a million blobs that sit where the detail is. Instant-NGP sits in between: its fine hash levels recover more detail than NeRF, but hash collisions leave a grainy noise. Step 1, the honest counterexample: the lowest test view, looking up under the ball. Few of my photos were taken from that low, and here NeRF is best, about 3 dB above Gaussian splatting. Gaussian splatting breaks one of the ball feet into a loose cluster, exactly the stretched or blotchy Gaussians the paper lists as a limitation in poorly observed regions. A network interpolates more smoothly between views; independent blobs do not.</aside>
+</section>
+
+<!-- ============================================================ my capture: storage, training and rendering -->
+<section class="slide" id="s-gcost" data-title="What each method costs on my globe" data-steps="2">
+  <h2>What each method costs on my globe</h2>
+  <div class="seg" id="gk-seg" role="group" aria-label="Cost"><button type="button" data-v="0" aria-pressed="true">Storage</button><button type="button" data-v="1" aria-pressed="false">Training</button><button type="button" data-v="2" aria-pressed="false">One image</button></div>
+  <div class="res gres gcost">
+    <div class="bars num" id="gk-chart"></div>
+    <div class="expl" id="gk-expl"></div>
+  </div>
+  <p class="src" id="gk-src"></p>
+  <aside class="notes" id="gk-notes"></aside>
 </section>
 
 <!-- ============================================================ my capture: Gaussian splatting live -->
@@ -2207,7 +2223,7 @@ function barChart(host, rows, opt){
 
 
 /* ---------------- my capture: measured results, written by demo/nerf/fill_deck.py from demo/nerf/globe_results.json ---------------- */
-const GLOBE = {"nerf":{"steps":100000,"hours":9.0,"test":{"psnr":27.68,"ssim":0.9,"lpips":0.112},"wins":8,"secondsPerFrame":18,"megabytes":5},"gs":{"steps":30000,"minutes":31,"gaussians":500482,"webGaussians":365559,"megabytes":118,"webMegabytes":29,"test":{"psnr":28.19,"ssim":0.945,"lpips":0.05},"wins":24,"msPerFrame":4.32},"views":32,"curve":{"test":[[2500,22.75],[5000,23.57],[7500,24.29],[10000,23.91],[12500,25.12],[15000,25.52],[17500,25.5],[20000,25.74],[22500,25.4],[25000,25.99],[27500,26.03],[30000,25.68],[32500,26.23],[35000,26.0],[37500,26.28],[40000,26.33],[42500,26.23],[45000,26.44],[47500,26.22],[50000,26.75],[52500,26.68],[55000,26.45],[57500,26.71],[60000,26.58],[62500,26.62],[65000,26.73],[67500,26.86],[70000,26.83],[72500,26.65],[75000,27.01],[77500,26.79],[80000,26.88],[82500,26.77],[85000,27.0],[87500,26.6],[90000,26.77],[92500,26.63],[95000,27.16],[97500,27.1],[100000,27.21]],"train":[[50,9.09],[550,14.38],[1050,17.67],[1550,20.88],[2050,21.59],[2550,22.03],[3050,22.36],[3550,22.62],[4050,22.8],[4550,22.96],[5050,23.13],[5550,23.27],[6050,23.42],[6550,23.53],[7050,23.64],[7550,23.76],[8050,23.88],[8550,23.97],[9050,24.05],[9550,24.15],[10050,24.23],[10550,24.31],[11050,24.38],[11550,24.48],[12050,24.57],[12550,24.64],[13050,24.71],[13550,24.79],[14050,24.86],[14550,24.91],[15050,24.97],[15550,25.03],[16050,25.09],[16550,25.14],[17050,25.21],[17550,25.29],[18050,25.34],[18550,25.38],[19050,25.42],[19550,25.45],[20050,25.49],[20550,25.55],[21050,25.61],[21550,25.64],[22050,25.69],[22550,25.75],[23050,25.8],[23550,25.83],[24050,25.85],[24550,25.87],[25050,25.93],[25550,25.97],[26050,26.0],[26550,26.04],[27050,26.07],[27550,26.13],[28050,26.18],[28550,26.19],[29050,26.22],[29550,26.26],[30050,26.27],[30550,26.3],[31050,26.34],[31550,26.39],[32050,26.42],[32550,26.43],[33050,26.45],[33550,26.5],[34050,26.53],[34550,26.53],[35050,26.55],[35550,26.57],[36050,26.6],[36550,26.64],[37050,26.67],[37550,26.71],[38050,26.74],[38550,26.75],[39050,26.76],[39550,26.78],[40050,26.78],[40550,26.8],[41050,26.84],[41550,26.86],[42050,26.89],[42550,26.91],[43050,26.94],[43550,26.96],[44050,26.97],[44550,26.98],[45050,27.01],[45550,27.04],[46050,27.06],[46550,27.08],[47050,27.08],[47550,27.09],[48050,27.11],[48550,27.13],[49050,27.16],[49550,27.16],[50050,27.19],[50550,27.23],[51050,27.23],[51550,27.24],[52050,27.25],[52550,27.26],[53050,27.28],[53550,27.3],[54050,27.31],[54550,27.33],[55050,27.35],[55550,27.35],[56050,27.36],[56550,27.39],[57050,27.4],[57550,27.38],[58050,27.4],[58550,27.43],[59050,27.44],[59550,27.45],[60050,27.48],[60550,27.48],[61050,27.51],[61550,27.53],[62050,27.52],[62550,27.53],[63050,27.55],[63550,27.56],[64050,27.58],[64550,27.59],[65050,27.61],[65550,27.61],[66050,27.62],[66550,27.63],[67050,27.63],[67550,27.64],[68050,27.65],[68550,27.69],[69050,27.7],[69550,27.71],[70050,27.69],[70550,27.69],[71050,27.72],[71550,27.74],[72050,27.74],[72550,27.77],[73050,27.78],[73550,27.78],[74050,27.79],[74550,27.82],[75050,27.83],[75550,27.83],[76050,27.83],[76550,27.83],[77050,27.84],[77550,27.85],[78050,27.86],[78550,27.86],[79050,27.89],[79550,27.9],[80050,27.9],[80550,27.9],[81050,27.92],[81550,27.93],[82050,27.93],[82550,27.94],[83050,27.95],[83550,27.96],[84050,27.97],[84550,27.97],[85050,27.97],[85550,27.98],[86050,27.99],[86550,28.0],[87050,28.0],[87550,28.02],[88050,28.02],[88550,28.02],[89050,28.04],[89550,28.04],[90050,28.03],[90550,28.03],[91050,28.04],[91550,28.06],[92050,28.07],[92550,28.08],[93050,28.09],[93550,28.08],[94050,28.09],[94550,28.11],[95050,28.1],[95550,28.1],[96050,28.13],[96550,28.13],[97050,28.13],[97550,28.15],[98050,28.14],[98550,28.15],[99050,28.16],[99550,28.15]]},"snaps":{"2500":22.75,"10000":23.91,"25000":25.99,"100000":27.21},"crop":{"image":"frame_00808","nerf":28.32,"gs":30.99},"low":{"image":"frame_03685","nerf":27.89,"gs":25.09},"orbitFrames":120};
+const GLOBE = {"nerf":{"steps":100000,"hours":9.0,"test":{"psnr":27.68,"ssim":0.9,"lpips":0.112},"wins":8,"secondsPerFrame":18,"numbers":1187848,"megabytes":4.8},"ngp":{"steps":20000,"minutes":15,"test":{"psnr":25.97,"ssim":0.895,"lpips":0.117},"wins":0,"secondsPerFrame":2.57,"numbers":12207469,"megabytes":24.4},"gs":{"steps":30000,"minutes":31,"gaussians":500482,"webGaussians":365559,"numbers":29528438,"megabytes":118,"webMegabytes":29,"test":{"psnr":28.19,"ssim":0.945,"lpips":0.05},"wins":24,"msPerFrame":6.05},"capture":{"videoSeconds":174,"videoMB":791,"trainPhotos":223,"photosMB":37.4,"rawMB":439},"views":32,"curve":{"test":[[2500,22.75],[5000,23.57],[7500,24.29],[10000,23.91],[12500,25.12],[15000,25.52],[17500,25.5],[20000,25.74],[22500,25.4],[25000,25.99],[27500,26.03],[30000,25.68],[32500,26.23],[35000,26.0],[37500,26.28],[40000,26.33],[42500,26.23],[45000,26.44],[47500,26.22],[50000,26.75],[52500,26.68],[55000,26.45],[57500,26.71],[60000,26.58],[62500,26.62],[65000,26.73],[67500,26.86],[70000,26.83],[72500,26.65],[75000,27.01],[77500,26.79],[80000,26.88],[82500,26.77],[85000,27.0],[87500,26.6],[90000,26.77],[92500,26.63],[95000,27.16],[97500,27.1],[100000,27.21]],"train":[[50,9.09],[550,14.38],[1050,17.67],[1550,20.88],[2050,21.59],[2550,22.03],[3050,22.36],[3550,22.62],[4050,22.8],[4550,22.96],[5050,23.13],[5550,23.27],[6050,23.42],[6550,23.53],[7050,23.64],[7550,23.76],[8050,23.88],[8550,23.97],[9050,24.05],[9550,24.15],[10050,24.23],[10550,24.31],[11050,24.38],[11550,24.48],[12050,24.57],[12550,24.64],[13050,24.71],[13550,24.79],[14050,24.86],[14550,24.91],[15050,24.97],[15550,25.03],[16050,25.09],[16550,25.14],[17050,25.21],[17550,25.29],[18050,25.34],[18550,25.38],[19050,25.42],[19550,25.45],[20050,25.49],[20550,25.55],[21050,25.61],[21550,25.64],[22050,25.69],[22550,25.75],[23050,25.8],[23550,25.83],[24050,25.85],[24550,25.87],[25050,25.93],[25550,25.97],[26050,26.0],[26550,26.04],[27050,26.07],[27550,26.13],[28050,26.18],[28550,26.19],[29050,26.22],[29550,26.26],[30050,26.27],[30550,26.3],[31050,26.34],[31550,26.39],[32050,26.42],[32550,26.43],[33050,26.45],[33550,26.5],[34050,26.53],[34550,26.53],[35050,26.55],[35550,26.57],[36050,26.6],[36550,26.64],[37050,26.67],[37550,26.71],[38050,26.74],[38550,26.75],[39050,26.76],[39550,26.78],[40050,26.78],[40550,26.8],[41050,26.84],[41550,26.86],[42050,26.89],[42550,26.91],[43050,26.94],[43550,26.96],[44050,26.97],[44550,26.98],[45050,27.01],[45550,27.04],[46050,27.06],[46550,27.08],[47050,27.08],[47550,27.09],[48050,27.11],[48550,27.13],[49050,27.16],[49550,27.16],[50050,27.19],[50550,27.23],[51050,27.23],[51550,27.24],[52050,27.25],[52550,27.26],[53050,27.28],[53550,27.3],[54050,27.31],[54550,27.33],[55050,27.35],[55550,27.35],[56050,27.36],[56550,27.39],[57050,27.4],[57550,27.38],[58050,27.4],[58550,27.43],[59050,27.44],[59550,27.45],[60050,27.48],[60550,27.48],[61050,27.51],[61550,27.53],[62050,27.52],[62550,27.53],[63050,27.55],[63550,27.56],[64050,27.58],[64550,27.59],[65050,27.61],[65550,27.61],[66050,27.62],[66550,27.63],[67050,27.63],[67550,27.64],[68050,27.65],[68550,27.69],[69050,27.7],[69550,27.71],[70050,27.69],[70550,27.69],[71050,27.72],[71550,27.74],[72050,27.74],[72550,27.77],[73050,27.78],[73550,27.78],[74050,27.79],[74550,27.82],[75050,27.83],[75550,27.83],[76050,27.83],[76550,27.83],[77050,27.84],[77550,27.85],[78050,27.86],[78550,27.86],[79050,27.89],[79550,27.9],[80050,27.9],[80550,27.9],[81050,27.92],[81550,27.93],[82050,27.93],[82550,27.94],[83050,27.95],[83550,27.96],[84050,27.97],[84550,27.97],[85050,27.97],[85550,27.98],[86050,27.99],[86550,28.0],[87050,28.0],[87550,28.02],[88050,28.02],[88550,28.02],[89050,28.04],[89550,28.04],[90050,28.03],[90550,28.03],[91050,28.04],[91550,28.06],[92050,28.07],[92550,28.08],[93050,28.09],[93550,28.08],[94050,28.09],[94550,28.11],[95050,28.1],[95550,28.1],[96050,28.13],[96550,28.13],[97050,28.13],[97550,28.15],[98050,28.14],[98550,28.15],[99050,28.16],[99550,28.15]]},"snaps":{"2500":22.75,"10000":23.91,"25000":25.99,"100000":27.21},"crop":{"image":"frame_00808","nerf":28.32,"ngp":27.36,"gs":30.99},"low":{"image":"frame_03685","nerf":27.89,"ngp":25.58,"gs":25.09},"orbitFrames":120};
 const fmtInt = v => Math.round(v).toLocaleString('en-US');
 const slideIdx = s => slides.indexOf(s);
 // run fn(true) when the slide becomes the current one and fn(false) when another slide does
@@ -2262,42 +2278,73 @@ function onShow(id, fn){ const me = $('#' + id); if (!me) return; slides.forEach
   onShow('s-orbit', on => { if (on){ v.currentTime = 0; v.play().catch(() => {}); } else v.pause(); });
 })();
 
-/* ---------------- my capture: NeRF against Gaussian splatting, one measure per step ---------------- */
+/* ---------------- my capture: image quality of the three methods, one measure per step ---------------- */
+const METHODS = [['nerf', 'NeRF', 'me'], ['ngp', 'Instant-NGP', ''], ['gs', 'Gaussian splatting', 'ref']];
+const fmtTime = s => s >= 3600 ? `${(s / 3600).toFixed(1)} h` : s >= 60 ? `${Math.round(s / 60)} min` : s >= 1 ? `${s < 10 ? s.toFixed(1) : Math.round(s)} s` : `${(s * 1000).toFixed(1)} ms`;
 (function(){
-  const host = $('#gr-chart'); if (!host || !GLOBE) return;
-  const N = GLOBE.nerf, G = GLOBE.gs, dPsnr = G.test.psnr - N.test.psnr;
-  const less = Math.round(100 * (1 - 10 ** (-dPsnr / 10)));
+  const host = $('#gr-chart'); if (!host || !GLOBE || !GLOBE.ngp) return;
+  const name = k => METHODS.find(m => m[0] === k)[1];
+  const by = key => METHODS.map(([k]) => k).sort((a, b) => GLOBE[b].test[key] - GLOBE[a].test[key]);
+  const ps = by('psnr'), best = ps[0], worst = ps[2], d = GLOBE[best].test.psnr - GLOBE[worst].test.psnr;
+  const lp = by('lpips').reverse();
   const M = [
-    { head: 'PSNR (dB), higher is better', max: 30, v: [N.test.psnr, G.test.psnr], fmt: v => v.toFixed(2),
-      expl: `<p>Gaussian splatting is ${dPsnr.toFixed(1)} dB better on average and better on ${G.wins} of the ${GLOBE.views} photos.</p><p>The bars look alike, but ${dPsnr.toFixed(1)} dB is ${less}% less squared error.</p>` },
-    { head: 'SSIM, higher is better', max: 1, v: [N.test.ssim, G.test.ssim], fmt: v => v.toFixed(3),
-      expl: `<p>SSIM compares local structure such as edges and texture: ${G.test.ssim.toFixed(3)} against ${N.test.ssim.toFixed(3)}.</p>` },
-    { head: 'LPIPS, lower is better', max: 0.15, v: [N.test.lpips, G.test.lpips], fmt: v => v.toFixed(3),
-      expl: `<p>LPIPS punishes blur the most, and here the gap is largest: Gaussian splatting's value is less than half of NeRF's.</p>` },
-    { head: 'Training time on my laptop', max: 10, v: [N.hours, G.minutes / 60], fmt: v => v >= 1 ? `${v.toFixed(1)} h` : `${Math.round(v * 60)} min`,
-      expl: `<p>${N.hours.toFixed(1)} hours against ${G.minutes} minutes on the same GPU.</p>` },
-    { head: 'Time to render one 1080 × 607 image', max: 20, v: [N.secondsPerFrame, G.msPerFrame / 1000], fmt: v => v >= 1 ? `${Math.round(v)} s` : `${(v * 1000).toFixed(1)} ms`,
-      expl: `<p>${N.secondsPerFrame} seconds against ${G.msPerFrame.toFixed(1)} milliseconds, about ${fmtInt(Math.round(N.secondsPerFrame * 1000 / G.msPerFrame / 1000) * 1000)} times faster. The bar for Gaussian splatting is too short to see.</p>` },
+    { head: 'PSNR (dB), higher is better', max: 30, key: 'psnr', fmt: v => v.toFixed(2),
+      expl: `<p>${name(best)} has the best average and is the best of the three on ${GLOBE[best].wins} of the ${GLOBE.views} photos; ${name(ps[1])} on ${GLOBE[ps[1]].wins}, ${name(worst)} on ${GLOBE[worst].wins}.</p><p>The bars look alike, but the ${d.toFixed(1)} dB between first and last is ${Math.round(100 * (1 - 10 ** (-d / 10)))}% less squared error.</p>` },
+    { head: 'SSIM, higher is better', max: 1, key: 'ssim', fmt: v => v.toFixed(3),
+      expl: `<p>SSIM compares local structure such as edges and texture. ${name(by('ssim')[0])} keeps the most of it.</p>` },
+    { head: 'LPIPS, lower is better', max: 0.15, key: 'lpips', fmt: v => v.toFixed(3),
+      expl: `<p>LPIPS punishes blur the most. ${name(lp[0])} has ${(GLOBE[lp[2]].test.lpips / GLOBE[lp[0]].test.lpips).toFixed(1)} times less of it than ${name(lp[2])}.</p>` },
   ];
   function draw(s){
     const m = M[s];
-    barChart(host, [{ n: 'NeRF', cls: 'me', v: m.v[0], extra: ['', ''] }, { n: 'Gaussian splatting', cls: 'ref', v: m.v[1], extra: ['', ''] }],
-      { max: m.max, bar: 470, head: [m.head, '', ''], fmt: v => m.fmt(v) });
+    barChart(host, METHODS.map(([k, n, cls]) => ({ n, cls, v: GLOBE[k].test[m.key], extra: ['', ''] })), { max: m.max, bar: 470, head: [m.head, '', ''], fmt: v => m.fmt(v) });
     $('#gr-expl').innerHTML = m.expl;
     pressTab('#gr-seg', s);
   }
+  $('#gr-notes').textContent = `Same photos, cameras, masks, held-out views and GPU for all three, so this is a fair comparison on my own data. PSNR: ${METHODS.map(([k, n]) => `${n} ${GLOBE[k].test.psnr.toFixed(2)}`).join(', ')} dB. SSIM: ${METHODS.map(([k, n]) => `${n} ${GLOBE[k].test.ssim.toFixed(3)}`).join(', ')}. LPIPS, which punishes blur most: ${METHODS.map(([k, n]) => `${n} ${GLOBE[k].test.lpips.toFixed(3)}`).join(', ')}. Instant-NGP is my implementation of the paper's model: the same 16-level hash grid with 2 to the 19 entries per level and the two small 64-wide networks, with a CUDA kernel for the hash lookup, but NeRF-style sampling instead of the paper's occupancy grid. Like the official code for photos with transparency, it trains against a random background colour on every ray; against plain white it filled empty space with white fog and lost 1.4 dB. Gaussian splatting renders for an ideal pinhole camera, so all photos and renders were resampled the same way, which moves NeRF from 27.27 to 27.68 dB.`;
   stepTabs('#gr-seg');
   hooks['s-gres'] = draw;
 })();
 
 /* ---------------- my capture: close-up, then the low view ---------------- */
 (function(){
-  if (!$('#gc-p0') || !GLOBE) return;
+  if (!$('#gc-p0') || !GLOBE || !GLOBE.ngp) return;
   const c = GLOBE.crop, l = GLOBE.low, num = s => s.replace('frame_', '').replace(/^0+/, '');
-  $('#gc-c1').textContent = `NeRF, ${c.nerf.toFixed(1)} dB`; $('#gc-c2').textContent = `Gaussian splatting, ${c.gs.toFixed(1)} dB`;
-  $('#gc-c3').textContent = `NeRF, ${l.nerf.toFixed(1)} dB`; $('#gc-c4').textContent = `Gaussian splatting, ${l.gs.toFixed(1)} dB`;
+  const cap = (n, v) => `${n}, ${v.toFixed(1)} dB`;
+  $('#gc-c1').textContent = cap('NeRF', c.nerf); $('#gc-c5').textContent = cap('Instant-NGP', c.ngp); $('#gc-c2').textContent = cap('Gaussian splatting', c.gs);
+  $('#gc-c3').textContent = cap('NeRF', l.nerf); $('#gc-c6').textContent = cap('Instant-NGP', l.ngp); $('#gc-c4').textContent = cap('Gaussian splatting', l.gs);
   $('#gc-src').textContent = `Held-out frames ${num(c.image)} and ${num(l.image)} of my capture, never used in training; PSNR over the whole photo; both rows are enlarged close-ups. Limitation: Kerbl et al. 2023, Sec. 7.4.`;
   hooks['s-gcmp'] = s => { $('#gc-p0').classList.toggle('off', s !== 0); $('#gc-p1').classList.toggle('off', s !== 1); };
+})();
+
+/* ---------------- my capture: storage (with the photos themselves), training and rendering time ---------------- */
+(function(){
+  const host = $('#gk-chart'); if (!host || !GLOBE || !GLOBE.ngp) return;
+  const C = GLOBE.capture, N = GLOBE.nerf, I = GLOBE.ngp, G = GLOBE.gs;
+  const mb = v => `${v < 10 ? v.toFixed(1) : fmtInt(v)} MB`;
+  const S = [
+    { head: 'Storage on disk', max: 820, fmt: mb, rows: [
+      { n: `The video, ${Math.floor(C.videoSeconds / 60)} min ${C.videoSeconds % 60} s`, cls: 'inp', v: C.videoMB },
+      { n: `${C.trainPhotos} photos, JPEG`, cls: 'inp', v: C.photosMB },
+      { n: 'NeRF', cls: 'me', v: N.megabytes }, { n: 'Instant-NGP', cls: '', v: I.megabytes }, { n: 'Gaussian splatting', cls: 'ref', v: G.megabytes }],
+      expl: `<p>NeRF keeps the whole globe, from every direction, in ${mb(N.megabytes)}: ${Math.round(C.photosMB / N.megabytes)} times less than the ${C.trainPhotos} photos it learned from.</p><p>Instant-NGP's hash tables take ${mb(I.megabytes)}, and Gaussian splatting's ${fmtInt(G.gaussians)} Gaussians ${mb(G.megabytes)}; packed for the live demo they fit in ${G.webMegabytes} MB.</p>` },
+    { head: 'Training time on my laptop', max: 9.5 * 3600, fmt: fmtTime, rows: [
+      { n: 'NeRF', cls: 'me', v: N.hours * 3600 }, { n: 'Instant-NGP', cls: '', v: I.minutes * 60 }, { n: 'Gaussian splatting', cls: 'ref', v: G.minutes * 60 }],
+      expl: `<p>${N.hours.toFixed(1)} hours for NeRF, ${I.minutes} minutes for Instant-NGP and ${G.minutes} minutes for Gaussian splatting, on the same GPU.</p><p>My Instant-NGP runs partly in PyTorch; with the paper's fully fused code it would take seconds to minutes.</p>` },
+    { head: 'Time to render one 1080 × 607 image', max: 20, fmt: fmtTime, rows: [
+      { n: 'NeRF', cls: 'me', v: N.secondsPerFrame }, { n: 'Instant-NGP', cls: '', v: I.secondsPerFrame }, { n: 'Gaussian splatting', cls: 'ref', v: G.msPerFrame / 1000 }],
+      expl: `<p>${N.secondsPerFrame} seconds for NeRF, ${fmtTime(I.secondsPerFrame)} for Instant-NGP and ${G.msPerFrame.toFixed(1)} milliseconds for Gaussian splatting: about ${fmtInt(Math.round(1000 / G.msPerFrame))} images per second, which is why only it can be shown live.</p>` },
+  ];
+  function draw(s){
+    const m = S[s];
+    barChart(host, m.rows.map(r => ({ ...r, extra: ['', ''] })), { max: m.max, bar: 470, head: [m.head, '', ''], fmt: v => m.fmt(v) });
+    $('#gk-expl').innerHTML = m.expl;
+    pressTab('#gk-seg', s);
+  }
+  $('#gk-src').textContent = `My capture. Video: ${C.videoSeconds} s of HEVC at about 36 Mbit/s (its size from the bitrate). Photos: the ${C.trainPhotos} training frames as 1080 × 607 JPEG (${fmtInt(C.rawMB)} MB uncompressed). Models as stored: NeRF ${fmtInt(N.numbers)} weights at 32 bits, Instant-NGP ${fmtInt(I.numbers)} numbers at 16 bits as in the paper, Gaussian splatting ${fmtInt(G.numbers)} numbers at 32 bits (.ply). Same laptop GPU (RTX 5070 Ti) for all times.`;
+  $('#gk-notes').textContent = `The practical side. Storage: the input is a ${Math.round(C.videoMB)} MB video, or ${C.photosMB} MB of training photos. NeRF compresses the scene into ${N.megabytes} MB of network weights, smaller than the photos and able to render any viewpoint. Instant-NGP needs ${I.megabytes} MB, almost all of it the hash tables; Gaussian splatting needs the most, ${G.megabytes} MB, because every Gaussian stores 59 numbers. Training: NeRF took ${N.hours} hours, my Instant-NGP ${I.minutes} minutes and Gaussian splatting ${G.minutes} minutes on the same laptop GPU. My Instant-NGP is not the fully fused CUDA code, so the paper's seconds are not reproduced; the ratio to NeRF is the point. Rendering one image: ${N.secondsPerFrame} seconds, ${fmtTime(I.secondsPerFrame)} and ${G.msPerFrame.toFixed(1)} milliseconds. Gaussian splatting is the only one fast enough to show live, which is the next slide.`;
+  stepTabs('#gk-seg');
+  hooks['s-gcost'] = draw;
 })();
 
 /* ---------------- my capture: the trained Gaussians drawn live (gs/splat-viewer.js, loaded from the capture part on) ---------------- */
