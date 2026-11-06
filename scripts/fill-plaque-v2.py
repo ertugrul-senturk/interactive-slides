@@ -37,6 +37,11 @@ for key, enc, year, crops in MODELS:
     c = load(SRC / "reports" / "conversion" / f"{key}.json") or {}
     # a model is shown only once it has finished training and its TFLite conversion has been attempted
     r = dict(key=key, enc=enc, year=year, crops=crops, done=bool(s) and bool(c))
+    if not s and key == "effsam_hr512":       # stopped after 2 of 5 folds (cluster disk quota): mean of the finished folds, marked on the slide
+        rr = load(SRC / "outputs_v2_fetched" / key / "results.json") or []
+        if rr:
+            m = lambda k: round(sum(x[k] for x in rr) / len(rr), 3)
+            r.update(done=True, partial=len(rr), tooth=m("tooth_iou"), photo=m("photo_iou"), pooled=m("pooled_iou"), f2=m("tooth_f2"), f2pooled=m("pooled_f2"))
     if s:
         r.update(tooth=round(s["tooth_iou"]["mean"], 3), photo=round(s["photo_iou"]["mean"], 3), pooled=round(s["pooled_iou"]["mean"], 3),
                  f2=round(s["tooth_f2"]["mean"], 3), f2pooled=round(s["pooled_f2"]["mean"], 3), params=round(s["config"].get("params_m") or 0, 1))
