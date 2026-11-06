@@ -12,10 +12,6 @@
   "file": "s-system.jpg"
  },
  {
-  "id": "s-since",
-  "file": "s-since.jpg"
- },
- {
   "id": "s-start",
   "file": "s-start.jpg"
  },
@@ -42,6 +38,10 @@
  {
   "id": "s-gums",
   "file": "s-gums.jpg"
+ },
+ {
+  "id": "s-export",
+  "file": "s-export.jpg"
  },
  {
   "id": "s-memory",
@@ -72,28 +72,8 @@
   "file": "s-games.jpg"
  },
  {
-  "id": "s-brush",
-  "file": "s-brush.jpg"
- },
- {
-  "id": "s-words",
-  "file": "s-words.jpg"
- },
- {
-  "id": "s-tf",
-  "file": "s-tf.jpg"
- },
- {
-  "id": "s-routines",
-  "file": "s-routines.jpg"
- },
- {
   "id": "s-risk",
   "file": "s-risk.jpg"
- },
- {
-  "id": "s-history",
-  "file": "s-history.jpg"
  },
  {
   "id": "s-sync",
@@ -118,10 +98,6 @@
  {
   "id": "s-datasets",
   "file": "s-datasets.jpg"
- },
- {
-  "id": "s-loop",
-  "file": "s-loop.jpg"
  },
  {
   "id": "s-next",
