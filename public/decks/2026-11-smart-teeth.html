@@ -432,15 +432,14 @@ svg .tick{fill:var(--ink-3)}
       <tbody>
         <tr><td>Runs on</td><td>a server GPU</td><td class="t">the phone, 40 MB</td></tr>
         <tr><td>Input</td><td>the whole photo</td><td class="t">one tooth at a time</td></tr>
-        <tr><td>IoU on unseen data</td><td class="big">0.25</td><td class="big t">0.18 to 0.28</td></tr>
-        <tr><td>Plaque pixels found</td><td>50%</td><td class="t">64%</td></tr>
+        <tr><td>IoU on unseen teeth</td><td class="big">0.25</td><td class="big t">0.18</td></tr>
         <tr><td>Also gives</td><td>only the mask</td><td class="t">a coverage grade, 0 to 5</td></tr>
       </tbody>
     </table>
   </div>
-  <p class="callout">In the same range as the server pipeline, in a model small enough for the phone. Its weak point is small plaque spots.</p>
-  <p class="src">Unseen data: the held-out fold of 5-fold cross-validation, 1,116 tooth crops, 117 with plaque. 0.18 averages each tooth equally, 0.28 counts all plaque pixels together. The paper's averaging is not stated, so the comparison is approximate.</p>
-  <aside class="notes">My plaque model. One tooth at a time, padded to keep its shape; it outputs a mask and a coverage grade. It is a UNet++ with an EfficientNet-B4 encoder, about 20 million parameters, trained on 5,581 tooth crops from 495 photos, with a loss that favours finding plaque over precision. On teeth it never saw in training, its IoU is between 0.18 and 0.28 depending on how you average: 0.18 if every tooth counts equally, 0.28 if you count all plaque pixels together. Large plaque areas it gets well; small spots it often misses, which is why the per-tooth number is lower. The SAM2 pipeline in the reference paper reports 0.25 on whole photos with a server GPU, so we are in the same range with a model that runs on the phone. If someone asks about August: the 0.27 I showed then was computed on all crops including the training ones; these are the held-out numbers. Next steps are splitting by photo instead of by tooth, and more labelled small spots.</aside>
+  <p class="callout">Less accurate than the server pipeline, but small enough to run on the phone, and it adds a coverage grade. Its weak point is small plaque spots.</p>
+  <p class="src">Unseen teeth: the held-out fold of 5-fold cross-validation, 1,116 tooth crops, 117 with plaque; IoU averaged over the teeth with plaque. The reference paper scores whole photos.</p>
+  <aside class="notes">My plaque model. It looks at one tooth at a time, padded to keep its shape, and outputs a plaque mask and a coverage grade from 0 to 5. It is a UNet++ with an EfficientNet-B4 encoder, about 20 million parameters, trained on 5,581 tooth crops from 495 photos, with a loss that favours finding plaque. On teeth it never saw in training its IoU is 0.18, below the 0.25 of the SAM2 pipeline in the reference paper, which runs on a server GPU on whole photos. What it gives instead is that it runs on the phone in 40 MB and grades coverage. It finds large plaque areas well and often misses small spots. If someone remembers 0.27 from August: that was computed on all crops including the training ones; this is the held-out number. Next steps: split folds by photo, and label more small spots.</aside>
 </section>
 
 
@@ -679,7 +678,7 @@ svg .tick{fill:var(--ink-3)}
 <section class="slide" id="s-take" data-title="Summary">
   <h2>Summary</h2>
   <div class="rows4">
-    <div class="rw"><div class="rk">On the phone</div><p>Five models, 211 MB, analyse one photo offline. I built the mouth and plaque models and retrained the existing gum model. The 40 MB plaque model is in the same range as a server-side SAM2 pipeline on unseen teeth.</p></div>
+    <div class="rw"><div class="rk">On the phone</div><p>Five models, 211 MB, analyse one photo offline. I built the mouth and plaque models and retrained the existing gum model. The 40 MB plaque model runs on the phone, below a server-side SAM2 pipeline in accuracy (IoU 0.18 against 0.25).</p></div>
     <div class="rw"><div class="rk">The Tooth Fairy</div><p>A guide that answers in a parent's own words and opens the right screen, and a summary after every scan, from text and counts only, at about a hundredth of a cent per call.</p></div>
     <div class="rw"><div class="rk">Coming back</div><p>Three games, one of which doubles as a study questionnaire, and daily routines with reminders bring families back, so we get repeated scans of the same child.</p></div>
     <div class="rw"><div class="rk">The desktop</div><p>Dentists review home scans remotely, correct the models, and build the datasets that train the next version.</p></div>
