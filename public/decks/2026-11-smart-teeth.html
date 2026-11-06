@@ -428,18 +428,18 @@ svg .tick{fill:var(--ink-3)}
       <p>It is a UNet++ with an ImageNet-pretrained EfficientNet-B4 encoder, trained in PyTorch on 5,581 tooth crops from 495 labelled photos. The loss is tuned to miss as little plaque as possible, because a missed spot matters more than an extra one.</p>
     </div>
     <table class="pt">
-      <thead><tr><th></th><th>SAM2 pipeline<br><span>reference paper</span></th><th class="t">My model</th></tr></thead>
+      <thead><tr><th></th><th>SAM2 pipeline<br><span>Zeng et al. 2026</span></th><th class="t">My model</th></tr></thead>
       <tbody>
         <tr><td>Runs on</td><td>a server GPU</td><td class="t">the phone, 40 MB</td></tr>
-        <tr><td>Input</td><td>the whole photo</td><td class="t">one tooth at a time</td></tr>
+        <tr><td>Input</td><td>each tooth, enlarged to 1024 px</td><td class="t">each tooth, padded to 256 px</td></tr>
         <tr><td>IoU on unseen teeth</td><td class="big">0.25</td><td class="big t">0.18</td></tr>
         <tr><td>Also gives</td><td>only the mask</td><td class="t">a coverage grade, 0 to 5</td></tr>
       </tbody>
     </table>
   </div>
   <p class="callout">Less accurate than the server pipeline, but small enough to run on the phone, and it adds a coverage grade. Its weak point is small plaque spots.</p>
-  <p class="src">Unseen teeth: the held-out fold of 5-fold cross-validation, 1,116 tooth crops, 117 with plaque; IoU averaged over the teeth with plaque. The reference paper scores whole photos.</p>
-  <aside class="notes">My plaque model. It looks at one tooth at a time, padded to keep its shape, and outputs a plaque mask and a coverage grade from 0 to 5. It is a UNet++ with an EfficientNet-B4 encoder, about 20 million parameters, trained on 5,581 tooth crops from 495 photos, with a loss that favours finding plaque. On teeth it never saw in training its IoU is 0.18, below the 0.25 of the SAM2 pipeline in the reference paper, which runs on a server GPU on whole photos. What it gives instead is that it runs on the phone in 40 MB and grades coverage. It finds large plaque areas well and often misses small spots. If someone remembers 0.27 from August: that was computed on all crops including the training ones; this is the held-out number.</aside>
+  <p class="src">Unseen teeth: the held-out fold of 5-fold cross-validation, 1,116 tooth crops, 117 with plaque; IoU averaged over the teeth with plaque. Reference: SAM2-Adapter with self-training, 10-fold cross-validation, scored on the teeth merged back into one mask per photo.</p>
+  <aside class="notes">My plaque model. It looks at one tooth at a time, padded to keep its shape, and outputs a plaque mask and a coverage grade from 0 to 5. It is a UNet++ with an EfficientNet-B4 encoder, about 20 million parameters, trained on 5,581 tooth crops from 495 photos, with a loss that favours finding plaque. On teeth it never saw in training its IoU is 0.18, below the 0.25 of the SAM2 pipeline in Ziyun's paper. That pipeline also works tooth by tooth, but it enlarges every tooth to 1024 pixels for a large SAM2 model on a server GPU, while mine sees 256 pixels on the phone. What it gives instead is that it runs on the phone in 40 MB and grades coverage. It finds large plaque areas well and often misses small spots. If someone remembers 0.27 from August: that was computed on all crops including the training ones; this is the held-out number.</aside>
 </section>
 
 
@@ -456,7 +456,7 @@ svg .tick{fill:var(--ink-3)}
     </div>
     <img class="phone sm" src="2026-11-smart-teeth/phone/result_gums.jpg" alt="Gums tab: 22 percent healthy, 78 percent mild">
   </div>
-  <p class="src">Training code from Rashwan, Shen et al. 2026 (in revision). Test set of 39 photos: mean IoU 0.53 over the four classes, pixel accuracy 95%. Exported PyTorch → ONNX (opset 17) → onnx2tf in float16, 77.1 MB. Shares on the phone are of the detected gum area.</p>
+  <p class="src">Test set of 39 photos: mean IoU 0.53 over the four classes, pixel accuracy 95%. Exported PyTorch → ONNX (opset 17) → onnx2tf in float16, 77.1 MB. Shares on the phone are of the detected gum area.</p>
   <aside class="notes">The gum model is not my design: the training code existed in the group, and I retrained it to get the feature working end to end. It is a U-Net with a ResNet-50 encoder. It works on the whole mouth crop, four classes. The training details are on the slide: 393 photos, Dice plus weighted cross-entropy with a weight of 20 on severe, and a smaller learning rate for the pretrained encoder. The per-class test IoU is around 0.4 for the three gum classes. The honest caveat is that the split was per photo, not per patient, so the same mouths are in training and test. That, and the small dataset, is why this is the first model to go through the relabeling and retraining cycle.</aside>
 </section>
 
@@ -693,7 +693,8 @@ svg .tick{fill:var(--ink-3)}
     <div>
       <h3>Our group</h3>
       <ol>
-        <li><span class="au">Rashwan, Shen, Zeng, Al Jallad, Assery, Lu, Senturk, Xiao &amp; Luo 2026.</span> <i>Artificial intelligence-based gingivitis detection from intraoral photographs.</i> In revision.</li>
+        <li><span class="au">Zeng, Chen, Rashwan, Al Jallad, Xiao &amp; Luo 2026.</span> <i>Automated detection and quantitative assessment of dental plaque in intraoral images.</i> ACM Transactions on Computing for Healthcare 7(2).</li>
+        <li><span class="au">Zhang, Liao, Xiao, Al Jallad, Ly-Mapes &amp; Luo 2020.</span> <i>A smartphone-based system for real-time early childhood caries diagnosis.</i> arXiv:2008.07623.</li>
       </ol>
       <h3>Children's dental health</h3>
       <ol>
@@ -725,7 +726,7 @@ svg .tick{fill:var(--ink-3)}
       </ol>
     </div>
   </div>
-  <aside class="notes">Sources for everything on the slides: our group's gingivitis paper, which the gum model comes from, the two national reports for the motivation, the ADA risk forms behind the questionnaires, the model architectures, the software, and the clinical content document the questionnaires and the true-or-false game come from.</aside>
+  <aside class="notes">Sources for everything on the slides: our group's plaque paper by Ziyun, which is the SAM2 reference on the plaque slide, and the earlier smartphone caries system from the group; the two national reports for the motivation, the ADA risk forms behind the questionnaires, the model architectures, the software, and the clinical content document the questionnaires and the true-or-false game come from.</aside>
 </section>
 
 </div>
