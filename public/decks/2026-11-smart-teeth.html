@@ -694,7 +694,7 @@ svg .tick{fill:var(--ink-3)}
   <h2>What comes next</h2>
   <div class="rows4">
     <div class="rw"><div class="rk">Retrain the cavity model</div><p>The group now has a larger cavity dataset labelled on the ICDAS scale, seven ordered codes from sound (0) to an extensive cavity (6). Because the codes are steps on one scale, the new model will use ordinal classification instead of treating them as unrelated classes.</p></div>
-    <div class="rw"><div class="rk">Plaque and gingivitis</div><p>One idea I want to explore: let SAM 3 label the photos in our unlabelled dataset, and train the mobile plaque and gum models on the larger set. It is not tested yet.</p></div>
+    <div class="rw"><div class="rk">Plaque and gingivitis</div><p>One idea I want to explore: let SAM 3 label the photos in our unlabelled dataset, and train the mobile plaque and gum models on the larger set.</p></div>
     <div class="rw"><div class="rk">Mobile architecture</div><p>The current on-device setup, TensorFlow Lite fed by an ONNX conversion, does not handle transformer-based models well. A new architecture would let newer models run on the phone and make scans faster.</p></div>
     <div class="rw"><div class="rk">User test</div><p>We are planning a user test of both apps with a test group chosen by the dental team.</p></div>
   </div>
