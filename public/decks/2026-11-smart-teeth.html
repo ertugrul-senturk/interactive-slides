@@ -177,7 +177,14 @@ svg .tick{fill:var(--ink-3)}
 #s-cavity .cls span{font-size:16.5px;color:var(--ink-2);line-height:1.35;display:block}
 
 /* ---------- plaque ---------- */
-#s-plaque .two{grid-template-columns:520px 1fr;gap:48px}
+#s-plaque .two{grid-template-columns:1fr 600px;gap:48px;align-items:start}
+#s-plaque .pt{width:100%;border-collapse:collapse;font-variant-numeric:lining-nums tabular-nums}
+#s-plaque .pt th{text-align:left;font-family:var(--serif);font-size:20px;font-weight:600;padding:0 12px 10px 0;border-bottom:1px solid var(--ink-3);vertical-align:bottom;line-height:1.2}
+#s-plaque .pt th span{font-family:var(--sans);font-size:15px;font-weight:400;color:var(--ink-3)}
+#s-plaque .pt td{font-size:18.5px;padding:12px 12px 12px 0;border-bottom:1px solid var(--rule);vertical-align:baseline;color:var(--ink)}
+#s-plaque .pt td:first-child{color:var(--ink-3);font-size:17px;width:170px}
+#s-plaque .pt td.big{font-family:var(--serif);font-size:28px}
+#s-plaque .t{color:var(--tuned)}
 #s-plaque #pl-text p{font-size:19px;line-height:1.45}
 #s-plaque svg{display:block;overflow:visible}
 #s-plaque table{border-collapse:collapse;width:100%;font-size:17px;margin-top:4px}
@@ -413,18 +420,29 @@ svg .tick{fill:var(--ink-3)}
 
 
 <!-- ============================================================ plaque -->
-<section class="slide" id="s-plaque" data-title="Plaque segmentation" data-steps="2">
+<section class="slide" id="s-plaque" data-title="Plaque segmentation">
   <h2>Plaque segmentation</h2>
   <div class="two">
     <div>
-      <div id="pl-fig"></div>
-      <p class="small" style="margin-top:6px">Reference: the best pipeline in the paper our group benchmarks against, SAM2 with self-training. The paper does not state how it averages, so the comparison is indicative.</p>
+      <p>The model looks at one tooth at a time. Each tooth crop is padded to a square of 256 × 256 so it keeps its shape, and the model draws the plaque on it and gives a coverage grade from 0 to 5.</p>
+      <p>It is a UNet++ with an ImageNet-pretrained EfficientNet-B4 encoder, trained in PyTorch on 5,581 tooth crops from 495 labelled photos. The loss is tuned to miss as little plaque as possible, because a missed spot matters more than an extra one.</p>
     </div>
-    <div><div id="pl-text"></div></div>
+    <table class="pt">
+      <thead><tr><th></th><th>SAM2 pipeline<br><span>reference paper</span></th><th class="t">My model</th></tr></thead>
+      <tbody>
+        <tr><td>Runs on</td><td>a server GPU</td><td class="t">the phone, 40 MB</td></tr>
+        <tr><td>Input</td><td>the whole photo</td><td class="t">one tooth at a time</td></tr>
+        <tr><td>IoU on unseen data</td><td class="big">0.25</td><td class="big t">0.18 to 0.28</td></tr>
+        <tr><td>Plaque pixels found</td><td>50%</td><td class="t">64%</td></tr>
+        <tr><td>Also gives</td><td>only the mask</td><td class="t">a coverage grade, 0 to 5</td></tr>
+      </tbody>
+    </table>
   </div>
-  <p class="src">Held-out fold of 5-fold cross-validation, 1,116 tooth crops, 117 with plaque; threshold 0.30. Trained on BlueHive (H100). Earlier reported 0.27 / 0.46 included training crops. Grade accuracy held out: 90.1% (always grade 0 would give 89.5%).</p>
-  <aside class="notes" id="pl-notes">My retrained plaque model, three steps. First the recipe: a UNet++ with an ImageNet EfficientNet-B4 encoder from segmentation_models_pytorch, about 20 million parameters, 40 MB in half precision on the phone, trained on 5,581 tooth crops from 495 labelled photos. Second the results, honestly: on the held-out fold it finds 64 percent of plaque pixels at 33 percent precision. Pooled over pixels that is IoU 0.28 and F2 0.54, above the reference SAM2 pipeline's 0.251 and 0.453; averaged per plaque tooth it is lower, 0.18 and 0.31. The numbers I showed in August, 0.27 and 0.46, were computed on all crops including training data, so I replaced them. Third, why a small model gets there: per-tooth crops remove the background, the loss and model selection are tuned for recall which F2 rewards, and the class imbalance is handled explicitly. And what to fix: split folds by photo, and generate training crops with the same detector settings as the app.</aside>
+  <p class="callout">In the same range as the server pipeline, in a model small enough for the phone. Its weak point is small plaque spots.</p>
+  <p class="src">Unseen data: the held-out fold of 5-fold cross-validation, 1,116 tooth crops, 117 with plaque. 0.18 averages each tooth equally, 0.28 counts all plaque pixels together. The paper's averaging is not stated, so the comparison is approximate.</p>
+  <aside class="notes">My plaque model. One tooth at a time, padded to keep its shape; it outputs a mask and a coverage grade. It is a UNet++ with an EfficientNet-B4 encoder, about 20 million parameters, trained on 5,581 tooth crops from 495 photos, with a loss that favours finding plaque over precision. On teeth it never saw in training, its IoU is between 0.18 and 0.28 depending on how you average: 0.18 if every tooth counts equally, 0.28 if you count all plaque pixels together. Large plaque areas it gets well; small spots it often misses, which is why the per-tooth number is lower. The SAM2 pipeline in the reference paper reports 0.25 on whole photos with a server GPU, so we are in the same range with a model that runs on the phone. If someone asks about August: the 0.27 I showed then was computed on all crops including the training ones; these are the held-out numbers. Next steps are splitting by photo instead of by tooth, and more labelled small spots.</aside>
 </section>
+
 
 
 <!-- ============================================================ gums -->
@@ -661,7 +679,7 @@ svg .tick{fill:var(--ink-3)}
 <section class="slide" id="s-take" data-title="Summary">
   <h2>Summary</h2>
   <div class="rows4">
-    <div class="rw"><div class="rk">On the phone</div><p>Five models, 211 MB, analyse one photo offline. I built the mouth and plaque models and retrained the existing gum model; the 40 MB plaque UNet++ reaches pooled held-out F2 0.54 against 0.45 for the server-side SAM2 reference.</p></div>
+    <div class="rw"><div class="rk">On the phone</div><p>Five models, 211 MB, analyse one photo offline. I built the mouth and plaque models and retrained the existing gum model. The 40 MB plaque model is in the same range as a server-side SAM2 pipeline on unseen teeth.</p></div>
     <div class="rw"><div class="rk">The Tooth Fairy</div><p>A guide that answers in a parent's own words and opens the right screen, and a summary after every scan, from text and counts only, at about a hundredth of a cent per call.</p></div>
     <div class="rw"><div class="rk">Coming back</div><p>Three games, one of which doubles as a study questionnaire, and daily routines with reminders bring families back, so we get repeated scans of the same child.</p></div>
     <div class="rw"><div class="rk">The desktop</div><p>Dentists review home scans remotely, correct the models, and build the datasets that train the next version.</p></div>
@@ -1040,37 +1058,6 @@ setInterval(() => { if (notesWin && !notesWin.closed && t0){ const s = Math.floo
   hooks['s-number'] = s => { st = s; draw(); $('#nb-text').innerHTML = `<p>${TXT()[s]}</p>`; };
   $('#nb-new').addEventListener('click', () => { make(); $('#nb-text').innerHTML = `<p>${TXT()[st]}</p>`; });
   make();
-})();
-
-/* ---------------- plaque: reference pipeline against my model, held out ---------------- */
-(function(){
-  const host = $('#pl-fig'); if (!host) return;
-  // reference: SAM2 + self-training as listed in the group's plaque report; mine: held-out fold (eval_heldout_fold.csv)
-  const M = [
-    { m: 'IoU', ref: 0.251, pix: 0.281, tooth: 0.179 },
-    { m: 'F2',  ref: 0.453, pix: 0.542, tooth: 0.309 },
-  ];
-  const W = 520, H = 330, x0 = 56, bw = 300, I = css('--ink'), T = css('--tuned'), TL = css('--tuned-line'), G = css('--ink-3');
-  const X = v => x0 + bw * v / 0.6;
-  const svg = svgOf(W, H, 'Held-out IoU and F2 of my plaque model, pooled over pixels and averaged per tooth, against the reference SAM2 pipeline');
-  host.append(svg);
-  M.forEach((d, i) => {
-    const y = 10 + i * 150;
-    tx(svg, 0, y + 58, d.m, `font-family:${css('--serif')};font-size:22px;font-weight:600;fill:${I}`, 'start');
-    [[d.ref, G, 'reference'], [d.pix, T, 'mine, pooled pixels'], [d.tooth, TL, 'mine, per tooth']].forEach(([v, c, l], j) => {
-      const yy = y + j * 38;
-      svg.append(el('rect', { x: x0, y: yy, width: X(v) - x0, height: 30, fill: c }));
-      tx(svg, X(v) + 8, yy + 21, `${v.toFixed(3)}  ${l}`, `font-size:15.5px;fill:${j === 2 ? T : c}`, 'start');
-    });
-  });
-  svg.append(el('line', { x1: x0, y1: 304, x2: X(0.6), y2: 304, stroke: css('--rule') }));
-  [0, 0.2, 0.4, 0.6].forEach(v => tx(svg, X(v), 322, v.toFixed(1), '', 'middle').classList.add('tick'));
-  const TXT = [
-    `<p><b>The recipe.</b> A UNet++ with an ImageNet-pretrained EfficientNet-B4 encoder (segmentation_models_pytorch, about 20 M parameters) and a small head on the deepest feature that predicts the 0 to 5 coverage grade.</p><p>The tooth detector cuts 5,581 crops from 495 labelled photos; each is letterboxed to 256 × 256 and heavily augmented. Loss: 0.7 × mask (Tversky with α 0.4, β 0.6, plus focal) and 0.3 × weighted cross-entropy for the grade. AdamW, 30 epochs, 5 folds, best epoch chosen by F2.</p>`,
-    `<p><b>The result, held out.</b> The model finds 64% of the plaque pixels at 33% precision. Pooled over all pixels that is IoU 0.28 and F2 0.54, above the reference pipeline's 0.251 and 0.453. Averaged tooth by tooth it is lower, 0.18 and 0.31: pooling lets large plaque regions dominate, while in the per-tooth mean every small spot counts as much as a large one.</p><p>It does this in a 40 MB file on the phone, against a foundation model that needs a server GPU, and the phone conversion matched the PyTorch output (IoU 0.2730 against 0.2729).</p>`,
-    `<p><b>Why a small model gets there.</b> Cropping each tooth removes the background, which otherwise dominates the loss: only 10.5% of crops contain any plaque. The Tversky weights, the focal term and choosing epochs by F2 all push recall, and F2 counts recall four times as much as precision. Stratified folds and capped class weights keep the rare grades from being ignored.</p><p><b>What to fix.</b> The folds split teeth, not photos, so one mouth can sit in training and validation; and the training crops came from different detector settings than the app uses.</p>`,
-  ];
-  hooks['s-plaque'] = s => { $('#pl-text').innerHTML = TXT[s]; };
 })();
 
 /* ---------------- gums: per-class test IoU ---------------- */
