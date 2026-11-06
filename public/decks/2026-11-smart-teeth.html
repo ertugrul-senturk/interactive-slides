@@ -456,7 +456,7 @@ svg .tick{fill:var(--ink-3)}
     </div>
     <img class="phone sm" src="2026-11-smart-teeth/phone/result_gums.jpg" alt="Gums tab: 22 percent healthy, 78 percent mild">
   </div>
-  <p class="src">Test set of 39 photos: mean IoU 0.53 over the four classes, pixel accuracy 95%. Exported PyTorch → ONNX (opset 17) → onnx2tf in float16, 77.1 MB. Shares on the phone are of the detected gum area.</p>
+  <p class="src">Training code from Rashwan, Shen et al. 2026 (in revision). Test set of 39 photos: mean IoU 0.53 over the four classes, pixel accuracy 95%. Exported PyTorch → ONNX (opset 17) → onnx2tf in float16, 77.1 MB. Shares on the phone are of the detected gum area.</p>
   <aside class="notes">The gum model is not my design: the training code existed in the group, and I retrained it to get the feature working end to end. It is a U-Net with a ResNet-50 encoder. It works on the whole mouth crop, four classes. The training details are on the slide: 393 photos, Dice plus weighted cross-entropy with a weight of 20 on severe, and a smaller learning rate for the pretrained encoder. The per-class test IoU is around 0.4 for the three gum classes. The honest caveat is that the split was per photo, not per patient, so the same mouths are in training and test. That, and the small dataset, is why this is the first model to go through the relabeling and retraining cycle.</aside>
 </section>
 
@@ -545,10 +545,10 @@ svg .tick{fill:var(--ink-3)}
     <div class="rw"><div class="rk">Cost per call</div><p>About $0.0001. A question uses about 800 tokens with its history, a summary about 400, and replies are short with no reasoning step. A thousand families asking five questions and scanning twice a week would be a few dollars a month.</p></div>
     <div class="rw"><div class="rk">Latency</div><p>1.4 to 2.7 seconds for the whole round trip. The reply is not streamed: the strict JSON format has to arrive complete before it can be checked, and then the app reveals it word by word.</p></div>
     <div class="rw"><div class="rk">Limits</div><p>A per-minute rate limit and a daily token budget per account, kept in the database so every server worker shares them. Over the budget the server answers 429 and the app says so.</p></div>
-    <div class="rw"><div class="rk">The model is not final</div><p>Provider, model name and key are three server settings behind one adapter, so moving to another model or vendor changes no app code. The choice waits for the IRB review of data about children.</p></div>
+    <div class="rw"><div class="rk">Easy to switch LLMs</div><p>Provider, model name and key are three server settings behind one adapter, so the Tooth Fairy adapts easily to a different LLM or vendor without any change to the app.</p></div>
   </div>
   <p class="src">Measured on gpt-6-luna with reasoning effort none, November 4, 2026 ($0.10 per million input and $0.50 per million output tokens). Server: Flask with 4 gunicorn workers; each call holds one for about 2 seconds.</p>
-  <aside class="notes">The language model is cheap: about a hundredth of a cent per call. Latency is the full round trip including the checks, under three seconds. We do not stream because the reply is structured JSON that must be validated before showing. The model itself is not decided: everything goes through one adapter on the server, and the final choice depends on the IRB, since parents write about children under 13.</aside>
+  <aside class="notes">The language model is cheap: about a hundredth of a cent per call. Latency is the full round trip including the checks, under three seconds. We do not stream because the reply is structured JSON that must be validated before showing. And the model is easy to change: everything goes through one adapter on the server, so moving to a different LLM is a settings change, not an app update.</aside>
 </section>
 
 
@@ -680,10 +680,10 @@ svg .tick{fill:var(--ink-3)}
   <div class="rows4">
     <div class="rw"><div class="rk">On the phone</div><p>Five models, 211 MB, analyse one photo offline. I built the mouth and plaque models and retrained the existing gum model.</p></div>
     <div class="rw"><div class="rk">The Tooth Fairy</div><p>A guide that answers in a parent's own words and opens the right screen, and a summary after every scan, from text and counts only, at about a hundredth of a cent per call.</p></div>
-    <div class="rw"><div class="rk">Coming back</div><p>Three games, one of which doubles as a study questionnaire, and daily routines with reminders bring families back, so we get repeated scans of the same child.</p></div>
+    <div class="rw"><div class="rk">Engaging features</div><p>Three games, one of which doubles as a study questionnaire, and daily routines with reminders keep families engaged, so we get repeated scans of the same child.</p></div>
     <div class="rw"><div class="rk">The desktop</div><p>Dentists review home scans remotely, correct the models, and build the datasets that train the next version.</p></div>
   </div>
-  <aside class="notes">Four lines to remember. The analysis runs fully on the phone. The Tooth Fairy adds language on top, carefully limited to text and counts. The games and routines exist to bring families back, because repeated scans are what make the data valuable. And the desktop app closes the loop from expert correction to a better model. Thank you; questions.</aside>
+  <aside class="notes">Four lines to remember. The analysis runs fully on the phone. The Tooth Fairy adds language on top, carefully limited to text and counts. The games and routines keep families engaged, because repeated scans are what make the data valuable. And the desktop app closes the loop from expert correction to a better model. Thank you; questions.</aside>
 </section>
 
 <!-- ============================================================ references -->
@@ -691,6 +691,10 @@ svg .tick{fill:var(--ink-3)}
   <h2>References</h2>
   <div class="refs">
     <div>
+      <h3>Our group</h3>
+      <ol>
+        <li><span class="au">Rashwan, Shen, Zeng, Al Jallad, Assery, Lu, Senturk, Xiao &amp; Luo 2026.</span> <i>Artificial intelligence-based gingivitis detection from intraoral photographs.</i> In revision.</li>
+      </ol>
       <h3>Children's dental health</h3>
       <ol>
         <li><span class="au">Centers for Disease Control and Prevention 2024.</span> <i>Oral health surveillance report: dental caries, tooth retention, and edentulism, United States.</i></li>
@@ -721,7 +725,7 @@ svg .tick{fill:var(--ink-3)}
       </ol>
     </div>
   </div>
-  <aside class="notes">Sources for everything on the slides: the two national reports for the motivation, the ADA risk forms behind the questionnaires, the model architectures, the software, and the clinical content document the questionnaires and the true-or-false game come from.</aside>
+  <aside class="notes">Sources for everything on the slides: our group's gingivitis paper, which the gum model comes from, the two national reports for the motivation, the ADA risk forms behind the questionnaires, the model architectures, the software, and the clinical content document the questionnaires and the true-or-false game come from.</aside>
 </section>
 
 </div>
