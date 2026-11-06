@@ -167,8 +167,8 @@ svg .tick{fill:var(--ink-3)}
 #s-number svg{display:block;background:var(--white);border:1px solid var(--rule);border-radius:3px}
 #s-number .nbc{display:flex;gap:12px;align-items:center;margin-top:10px}
 #s-number #nb-text p{font-size:19.5px;line-height:1.45}
-#s-number .real{display:grid;grid-template-columns:150px 1fr;gap:16px;align-items:start;margin-top:14px}
-#s-number .real img{width:150px;border:1px solid var(--rule);border-radius:10px;display:block}
+#s-number .real{display:grid;grid-template-columns:105px 1fr;gap:16px;align-items:start;margin-top:10px}
+#s-number .real img{width:105px;border:1px solid var(--rule);border-radius:10px;display:block}
 
 /* ---------- cavity ---------- */
 #s-cavity .cls{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);margin:6px 0 20px}
@@ -1034,7 +1034,7 @@ setInterval(() => { if (notesWin && !notesWin.closed && t0){ const s = Math.floo
   }
   const TXT = () => [
     'The tooth detector returns its boxes in order of confidence, so its tooth 1 is simply the box it was most sure of. Ordering them needs no learning: only the box centers are used.',
-    `First, one curve (a parabola, by least squares) is fitted through all the centers. The red lines are each center's distance to it; their root mean square is the error, here ${r1.toFixed(1)} pixels.`,
+    `First, one curve (a parabola, by least squares) is fitted through all the centers. The red lines are each center's distance to it; their root mean square is the error, here ${r1.toFixed(1)} pixels. With both rows visible the best parabola comes out almost flat, because the upper row bends one way and the lower row the other; that large error is the sign of two rows.`,
     `Then two curves: centers are assigned to the nearer one and both are refitted, alternating like EM. Two rows are kept only if the error drops to 60% or less of one curve and the rows overlap along the arch. Here ${split ? `it falls to ${Math.round(100 * r2 / r1)}%, so there are two rows; the higher one is the upper arch` : 'it does not, so it stays one row'}.`,
     'Within each row the centers are sorted along the curve from image-left to image-right, upper row first. If a curve fits a row badly, as in photos taken from above, the app instead chains nearest neighbours and untangles the path with 2-opt.',
   ];
