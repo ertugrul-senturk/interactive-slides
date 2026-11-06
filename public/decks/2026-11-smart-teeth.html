@@ -397,7 +397,7 @@ svg .tick{fill:var(--ink-3)}
     <div class="txt">
       <p>Both models came from the research group already trained, without their training data or metrics, and I integrated them as they were.</p>
       <p>The <b>tooth detector</b> is a YOLOv4 on 480 × 480 input scaled to 0 to 1. The app keeps boxes down to a score of 0.15 with NMS at 0.5: a tooth missed here can never get a finding, so recall matters more than precision. Each box becomes a tooth crop.</p>
-      <p>The <b>cavity classifier</b> is a Keras ResNet-v2 with group normalisation and weight standardisation, the Big Transfer design. It takes the crop resized to 224 × 224 and gives four logits; the softmax winner is the tooth's label, shown with its probability.</p>
+      <p>The <b>cavity classifier</b> is a ResNet-v2 classifier in TensorFlow/Keras. It takes the crop resized to 224 × 224 and gives four logits; the softmax winner is the tooth's label, shown with its probability.</p>
       <div class="cls">
         <div><b>Healthy</b><span>no visible decay</span></div>
         <div><b class="t">Level 1</b><span>white spots, early decay</span></div>
@@ -408,7 +408,7 @@ svg .tick{fill:var(--ink-3)}
     <img class="phone" src="2026-11-smart-teeth/phone/result_decay.jpg" alt="Decay tab: four healthy teeth with confidences">
   </div>
   <p class="src">Tooth detector: 64.3 MB, float32. Cavity classifier: TensorFlow 2.5 SavedModel converted with dynamic-range quantisation (int8 weights, float activations), 24.2 MB. On my photo all four teeth: healthy, 80 to 94%.</p>
-  <aside class="notes">The two models I did not train. The tooth detector is a YOLOv4 at 480 pixels. I run it with a deliberately low score threshold, 0.15, because everything downstream depends on it: a tooth it misses cannot get a cavity or plaque finding. The cavity classifier is a Keras ResNet-v2 with group norm and weight standardisation, which is the Big Transfer recipe; it classifies each crop into four classes, where other catches crowns and fillings. I converted it with dynamic-range quantisation, int8 weights and float activations, which cut it to 24 MB. Neither came with training data or evaluation numbers, which is a gap I want to close with the relabeling data.</aside>
+  <aside class="notes">The two models I did not train. The tooth detector is a YOLOv4 at 480 pixels. I run it with a deliberately low score threshold, 0.15, because everything downstream depends on it: a tooth it misses cannot get a cavity or plaque finding. The cavity classifier is a ResNet-v2 in Keras; it classifies each crop into four classes, where other catches crowns and fillings. I converted it with dynamic-range quantisation, int8 weights and float activations, which cut it to 24 MB. Neither came with training data or evaluation numbers, which is a gap I want to close with the relabeling data.</aside>
 </section>
 
 
@@ -690,7 +690,6 @@ svg .tick{fill:var(--ink-3)}
       <ol>
         <li><span class="au">Jocher &amp; Qiu 2024.</span> <i>Ultralytics YOLO11.</i></li>
         <li><span class="au">Bochkovskiy, Wang &amp; Liao 2020.</span> <i>YOLOv4.</i> arXiv:2004.10934.</li>
-        <li><span class="au">Kolesnikov et al. 2020.</span> <i>Big Transfer (BiT).</i> ECCV.</li>
         <li><span class="au">Zhou et al. 2018.</span> <i>UNet++.</i> DLMIA.</li>
         <li><span class="au">Tan &amp; Le 2019.</span> <i>EfficientNet.</i> ICML.</li>
         <li><span class="au">Ronneberger et al. 2015.</span> <i>U-Net.</i> MICCAI. <span class="au">He et al. 2016.</span> <i>ResNet.</i> CVPR.</li>
