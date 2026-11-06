@@ -951,7 +951,8 @@ const PLAQUE_V2 = [{"key":"b4_256","enc":"EfficientNet-B4 (current model)","year
     `<td class="n">${r.mb ? `${Math.round(r.mb)} MB${r.kind === 'float32' ? ' *' : ''}` : '–'}</td><td class="n">${r.ms ? Math.round(r.ms) : '–'}</td></tr>`).join('');
   const b = done.find(r => r.key === 'b4_256'), h = done.find(r => r.key === 'b4_hr512');
   const top = done.reduce((a, r) => (r.tooth > a.tooth ? r : a), done[0] || {});
-  $('#pv-line').innerHTML = b && h ? `Same model, sharper crops: IoU per tooth ${b.tooth.toFixed(3)} → ${h.tooth.toFixed(3)} (${h.tooth > b.tooth ? '+' : ''}${Math.round(100 * (h.tooth / b.tooth - 1))}%). The input mattered more than the architecture.` +
+  const lead = top.key === 'b4_hr512' ? 'none of the newer encoders has beaten it so far.' : `the best so far is ${top.enc} on ${top.crops} crops, ${top.tooth.toFixed(3)}.`;
+  $('#pv-line').innerHTML = b && h ? `Sharper crops helped the current model most: IoU per tooth ${b.tooth.toFixed(3)} → ${h.tooth.toFixed(3)} (${h.tooth > b.tooth ? '+' : ''}${Math.round(100 * (h.tooth / b.tooth - 1))}%); ${lead}` +
  '' : '';
 })();
 
