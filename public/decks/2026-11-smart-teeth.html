@@ -356,8 +356,8 @@ svg .tick{fill:var(--ink-3)}
       <img class="phone" src="2026-11-smart-teeth/phone/result_gums.jpg" alt="Gums tab">
     </div>
   </div>
-  <p class="src">Every model sees the photo resized to 640 px wide. Inputs and thresholds from the app's config/ml.json; architectures from the training code in SmartTeeth-AI. Red: the models I trained.</p>
-  <aside class="notes">The pipeline, one model per arrow press, on my own photo. The mouth detector is a YOLO11 nano I trained; it crops the mouth and the rest of the photo is discarded. The tooth detector is a YOLOv4 from the research group, run with a low score threshold of 0.15 because a missed tooth can never get a finding. Each tooth crop goes to two models: the cavity classifier, a Keras ResNet-v2 from the research group, and my plaque model, a UNet++ with an EfficientNet-B4 encoder that outputs a mask and a 0 to 5 grade. The whole mouth crop goes to the gum model, a U-Net with a ResNet-50 encoder. On the right is exactly what the parent sees at each stage.</aside>
+  <p class="src">Every model sees the photo resized to 640 px wide. Inputs and thresholds from the app's config/ml.json; architectures from the training code in SmartTeeth-AI. Red: the models I trained myself.</p>
+  <aside class="notes">The pipeline, one model per arrow press, on my own photo. The mouth detector is a YOLO11 nano I trained; it crops the mouth and the rest of the photo is discarded. The tooth detector is a YOLOv4 from the research group, run with a low score threshold of 0.15 because a missed tooth can never get a finding. Each tooth crop goes to two models: the cavity classifier, a Keras ResNet-v2 from the research group, and my plaque model, a UNet++ with an EfficientNet-B4 encoder that outputs a mask and a 0 to 5 grade. The whole mouth crop goes to the gum model, a U-Net with a ResNet-50 encoder; that training code already existed in the group, and I retrained it. On the right is exactly what the parent sees at each stage.</aside>
 </section>
 
 
@@ -432,7 +432,7 @@ svg .tick{fill:var(--ink-3)}
   <h2>Gum segmentation</h2>
   <div class="side">
     <div class="txt">
-      <p>A U-Net with an ImageNet-pretrained ResNet-50 encoder, in plain PyTorch (38.5 M parameters). It labels every pixel of the 512 × 512 mouth crop as background, healthy, mild to moderate, or severe, on the whole mouth because inflammation ignores tooth boundaries.</p>
+      <p>The training code already existed in the group; I retrained it with the existing pipeline. The model is a U-Net with an ImageNet-pretrained ResNet-50 encoder, in plain PyTorch (38.5 M parameters). It labels every pixel of the 512 × 512 mouth crop as background, healthy, mild to moderate, or severe, on the whole mouth because inflammation ignores tooth boundaries.</p>
       <p>393 photos labelled in Labelbox (300 / 53 / 39). Loss 0.6 × Dice + 0.4 × cross-entropy weighted 0.4 / 4 / 4 / 20 for the rare severe class; AdamW, encoder rate 1e-5 against 1e-4 for the decoder, cosine schedule.</p>
       <div id="gm-fig"></div>
       <p class="small">The split was per photo, so patients overlap between training and test: optimistic numbers, and the first model to retrain.</p>
@@ -440,7 +440,7 @@ svg .tick{fill:var(--ink-3)}
     <img class="phone sm" src="2026-11-smart-teeth/phone/result_gums.jpg" alt="Gums tab: 22 percent healthy, 78 percent mild">
   </div>
   <p class="src">Test set of 39 photos: mean IoU 0.53 over the four classes, pixel accuracy 95%. Exported PyTorch → ONNX (opset 17) → onnx2tf in float16, 77.1 MB. Shares on the phone are of the detected gum area.</p>
-  <aside class="notes">The gum model is a U-Net with a ResNet-50 encoder. It works on the whole mouth crop, four classes. The training details are on the slide: 393 photos, Dice plus weighted cross-entropy with a weight of 20 on severe, and a smaller learning rate for the pretrained encoder. The per-class test IoU is around 0.4 for the three gum classes. The honest caveat is that the split was per photo, not per patient, so the same mouths are in training and test. That, and the small dataset, is why this is the first model to go through the relabeling and retraining cycle.</aside>
+  <aside class="notes">The gum model is not my design: the training code existed in the group, and I retrained it to get the feature working end to end. It is a U-Net with a ResNet-50 encoder. It works on the whole mouth crop, four classes. The training details are on the slide: 393 photos, Dice plus weighted cross-entropy with a weight of 20 on severe, and a smaller learning rate for the pretrained encoder. The per-class test IoU is around 0.4 for the three gum classes. The honest caveat is that the split was per photo, not per patient, so the same mouths are in training and test. That, and the small dataset, is why this is the first model to go through the relabeling and retraining cycle.</aside>
 </section>
 
 
@@ -454,7 +454,7 @@ svg .tick{fill:var(--ink-3)}
       <tr><td class="nm">Teeth</td><td>YOLOv4, research group</td><td>received as TFLite</td><td>float32</td><td class="n">64.3 MB</td><td>none available</td></tr>
       <tr><td class="nm">Cavity</td><td>TensorFlow 2.5, Keras</td><td>TFLite converter</td><td>int8 weights, float activations</td><td class="n">24.2 MB</td><td>a check exists but is switched off</td></tr>
       <tr><td class="nm mine">Plaque</td><td>PyTorch, smp 0.5.0</td><td>ONNX opset 13 → onnxsim → onnx2tf; GELU replaced by x·σ(1.702x)</td><td>float16</td><td class="n">40.3 MB</td><td>plaque-tooth IoU 0.2730 vs 0.2729, grade accuracy identical</td></tr>
-      <tr><td class="nm mine">Gums</td><td>PyTorch, torchvision</td><td>ONNX opset 17 → onnx2tf</td><td>float16</td><td class="n">77.1 MB</td><td>pixel agreement on unlabelled images only</td></tr>
+      <tr><td class="nm">Gums</td><td>PyTorch, torchvision; existing code, retrained by me</td><td>ONNX opset 17 → onnx2tf</td><td>float16</td><td class="n">77.1 MB</td><td>pixel agreement on unlabelled images only</td></tr>
     </tbody>
   </table>
   <p style="max-width:1100px">The app runs TensorFlow Lite through react-native-fast-tflite, so every model has to end up as a .tflite file. Converting from PyTorch goes through ONNX and onnx2tf, which also changes the layout from channels-first to channels-last; for the plaque model the grade head's GELU was replaced by its sigmoid approximation before conversion.</p>
@@ -661,7 +661,7 @@ svg .tick{fill:var(--ink-3)}
 <section class="slide" id="s-take" data-title="Summary">
   <h2>Summary</h2>
   <div class="rows4">
-    <div class="rw"><div class="rk">On the phone</div><p>Five models, 211 MB, analyse one photo offline. I trained the mouth, plaque and gum models; the 40 MB plaque UNet++ reaches pooled held-out F2 0.54 against 0.45 for the server-side SAM2 reference.</p></div>
+    <div class="rw"><div class="rk">On the phone</div><p>Five models, 211 MB, analyse one photo offline. I built the mouth and plaque models and retrained the existing gum model; the 40 MB plaque UNet++ reaches pooled held-out F2 0.54 against 0.45 for the server-side SAM2 reference.</p></div>
     <div class="rw"><div class="rk">The Tooth Fairy</div><p>A guide that answers in a parent's own words and opens the right screen, and a summary after every scan, from text and counts only, at about a hundredth of a cent per call.</p></div>
     <div class="rw"><div class="rk">Coming back</div><p>Three games, one of which doubles as a study questionnaire, and daily routines with reminders bring families back, so we get repeated scans of the same child.</p></div>
     <div class="rw"><div class="rk">The desktop</div><p>Dentists review home scans remotely, correct the models, and build the datasets that train the next version.</p></div>
@@ -870,8 +870,8 @@ setInterval(() => { if (notesWin && !notesWin.closed && t0){ const s = Math.floo
     { name: 'Mouth', arch: 'YOLO11n, Ultralytics; 2.6 M parameters', inp: '320 × 320, letterboxed', out: 'one box, confidence ≥ 0.5', mine: true },
     { name: 'Teeth', arch: 'YOLOv4, from the research group', inp: '480 × 480, values 0 to 1', out: 'boxes, score ≥ 0.15, NMS 0.5' },
     { name: 'Cavity', arch: 'ResNet-v2 classifier, TF/Keras; from the research group', inp: '224 × 224 tooth crop', out: '4 classes, softmax' },
-    { name: 'Plaque', arch: 'UNet++, EfficientNet-B4 encoder, PyTorch; about 20 M parameters', inp: '256 × 256 letterboxed tooth crop', out: 'mask and a 0 to 5 grade', mine: true },
-    { name: 'Gums', arch: 'U-Net, ResNet-50 encoder, PyTorch; 38.5 M parameters', inp: '512 × 512 mouth crop', out: '4-class mask', mine: true },
+    { name: 'Plaque', arch: 'UNet++, EfficientNet-B4 encoder, PyTorch; about 20 M parameters', inp: '256 × 256 tooth crop', out: 'mask and a 0 to 5 grade', mine: true },
+    { name: 'Gums', arch: 'U-Net, ResNet-50 encoder, PyTorch; existing code, retrained by me', inp: '512 × 512 mouth crop', out: '4-class mask' },
   ];
   const mb = ['', ...MODELS.map(m => m.mb.toFixed(1) + ' MB')];
   body.innerHTML = R.map((r, i) => `<tr><td>${i}</td><td class="nm${r.mine ? ' mine' : ''}">${r.name}</td><td>${r.arch}</td><td>${r.inp}</td><td>${r.out}</td><td class="n">${mb[i]}</td></tr>`).join('');
@@ -1081,7 +1081,7 @@ setInterval(() => { if (notesWin && !notesWin.closed && t0){ const s = Math.floo
   const W = 640, H = 104, x0 = 150, bw = 380, X = v => x0 + bw * v;
   const svg = svgOf(W, H, 'Test IoU per class: healthy 0.42, mild to moderate 0.38, severe 0.36');
   tx(svg, 0, 14, 'Test IoU per class', `font-size:15px;font-weight:600;fill:${css('--ink-2')}`, 'start');
-  D.forEach(([l, v], i) => { const y = 26 + i * 26; tx(svg, 0, y + 15, l, 'font-size:15.5px;fill:' + css('--ink'), 'start'); svg.append(el('rect', { x: x0, y, width: X(v) - x0, height: 20, fill: css('--tuned') })); tx(svg, X(v) + 8, y + 15, v.toFixed(2), 'font-size:15.5px;fill:' + css('--tuned'), 'start'); });
+  D.forEach(([l, v], i) => { const y = 26 + i * 26; tx(svg, 0, y + 15, l, 'font-size:15.5px;fill:' + css('--ink'), 'start'); svg.append(el('rect', { x: x0, y, width: X(v) - x0, height: 20, fill: css('--ink-2') })); tx(svg, X(v) + 8, y + 15, v.toFixed(2), 'font-size:15.5px;fill:' + css('--ink'), 'start'); });
   host.append(svg);
 })();
 
