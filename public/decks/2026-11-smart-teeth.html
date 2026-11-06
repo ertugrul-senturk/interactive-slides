@@ -202,6 +202,7 @@ svg .tick{fill:var(--ink-3)}
 #s-plaque-v2 .pv td.best{color:var(--tuned);font-weight:600}
 #s-plaque-v2 .pv tr.base td{background:var(--wash)}
 #s-plaque-v2 .pv tr.wait td{color:var(--ink-3)}
+#s-plaque-v2 .pv tr.ref td{color:var(--frozen);border-top:1.5px solid var(--ink-3);border-bottom:none}
 #s-plaque-v2 .pv .yr{color:var(--ink-3);font-size:15px}
 #s-plaque-v2 .pv-line{font-family:var(--serif);font-size:19px;line-height:1.35;margin:10px 0 0;max-width:1120px}
 
@@ -466,7 +467,7 @@ svg .tick{fill:var(--ink-3)}
     <tbody></tbody>
   </table>
   <p class="pv-line" id="pv-line"></p>
-  <p class="src">Cross-validation split by photo, mean of the test folds; best per column in red. Size: verified TFLite file, float16; * float32 (float16 masks were wrong). ms: TFLite, laptop CPU, 4 threads. Reference: SAM2 pipeline IoU 0.25, F2 0.45 under a random image split (Zeng et al. 2026).</p>
+  <p class="src">Cross-validation split by photo, mean of the test folds; best per column in red. Size: verified TFLite file, float16; * float32 (float16 masks were wrong). ms: TFLite, laptop CPU, 4 threads. Base model in blue: SAM2-Adapter with self-training, random image split, runs on a server (Zeng et al. 2026).</p>
   <aside class="notes" id="pv-notes">After noticing the evaluation error I retrained under a strict protocol: folds split by photo, a separate validation set for the best epoch and the threshold, every model on the same folds so the comparison is paired. Shown here: the current model, MobileNetV4 from Google and FastViT from Apple, on low-res and high-res crops. The biggest single gain came not from the architecture but from the input: cutting the tooth crops from the full-resolution photos instead of the 512-pixel copies. Each model is also converted to TensorFlow Lite and checked against the PyTorch output on real teeth, so the sizes and speeds are for files that actually work.</aside>
 </section>
 
@@ -948,7 +949,8 @@ const PLAQUE_V2 = [{"key":"b4_256","enc":"EfficientNet-B4 (current model)","year
   const fmt = v => v == null ? '–' : v.toFixed(3);
   body.innerHTML = done.map(r => `<tr class="${r.key === 'b4_256' ? 'base' : ''}"><td>${r.enc} <span class="yr">${r.year}</span></td><td>${r.crops}</td>` +
     ['tooth', 'photo', 'pooled', 'f2', 'f2pooled'].map(k => `<td class="n${r[k] === best(k) ? ' best' : ''}">${fmt(r[k])}</td>`).join('') +
-    `<td class="n">${r.mb ? `${Math.round(r.mb)} MB${r.kind === 'float32' ? ' *' : ''}` : '–'}</td><td class="n">${r.ms ? Math.round(r.ms) : '–'}</td></tr>`).join('');
+    `<td class="n">${r.mb ? `${Math.round(r.mb)} MB${r.kind === 'float32' ? ' *' : ''}` : '–'}</td><td class="n">${r.ms ? Math.round(r.ms) : '–'}</td></tr>`).join('') +
+    `<tr class="ref"><td>SAM2 pipeline, base model <span class="yr">2026</span></td><td>tooth crops</td><td class="n">0.251</td><td class="n">–</td><td class="n">–</td><td class="n">0.453</td><td class="n">–</td><td class="n">server only</td><td class="n">–</td></tr>`;
   const part = done.filter(r => r.partial);
   const b = done.find(r => r.key === 'b4_256'), h = done.find(r => r.key === 'b4_hr512');
   const top = done.filter(r => !r.partial).reduce((a, r) => (r.tooth > a.tooth ? r : a), done.find(r => !r.partial) || {});
