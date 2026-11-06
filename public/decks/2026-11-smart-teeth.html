@@ -193,6 +193,18 @@ svg .tick{fill:var(--ink-3)}
 #s-plaque tr:last-child td{border-bottom:1px solid var(--rule)}
 #s-plaque td:first-child{color:var(--ink-3);width:118px}
 
+/* ---------- plaque: mobile architectures ---------- */
+#s-plaque-v2 .pv-lede{max-width:1100px;font-size:19.5px;margin:0 0 14px}
+#s-plaque-v2 .pv{width:100%;border-collapse:collapse;font-variant-numeric:lining-nums tabular-nums}
+#s-plaque-v2 .pv th{font-size:15px;font-weight:600;color:var(--ink-3);text-align:left;padding:0 12px 7px 0;border-bottom:1px solid var(--ink-3)}
+#s-plaque-v2 .pv td{font-size:16.5px;padding:7px 12px 7px 0;border-bottom:1px solid var(--rule);color:var(--ink)}
+#s-plaque-v2 .pv .n{text-align:right}
+#s-plaque-v2 .pv td.best{color:var(--tuned);font-weight:600}
+#s-plaque-v2 .pv tr.base td{background:var(--wash)}
+#s-plaque-v2 .pv tr.wait td{color:var(--ink-3)}
+#s-plaque-v2 .pv .yr{color:var(--ink-3);font-size:15px}
+#s-plaque-v2 .pv-line{font-family:var(--serif);font-size:21px;line-height:1.4;margin:14px 0 0;max-width:1100px}
+
 /* ---------- memory ---------- */
 #s-memory svg{display:block;overflow:visible}
 
@@ -428,20 +440,35 @@ svg .tick{fill:var(--ink-3)}
       <p>It is a UNet++ with an ImageNet-pretrained EfficientNet-B4 encoder, trained in PyTorch on 5,581 tooth crops from 495 labelled photos. The loss is tuned to miss as little plaque as possible, because a missed spot matters more than an extra one.</p>
     </div>
     <table class="pt">
-      <thead><tr><th></th><th>SAM2 pipeline<br><span>Zeng et al. 2026</span></th><th class="t">My model</th></tr></thead>
+      <thead><tr><th></th><th>SAM2 pipeline<br><span>Zeng et al. 2026</span></th><th class="t">My model<br><span>as first reported</span></th></tr></thead>
       <tbody>
         <tr><td>Runs on</td><td>a server GPU</td><td class="t">the phone, 40 MB</td></tr>
         <tr><td>Input</td><td>each tooth, enlarged to 1024 px</td><td class="t">each tooth, padded to 256 px</td></tr>
-        <tr><td>IoU on unseen teeth</td><td class="big">0.25</td><td class="big t">0.18</td></tr>
+        <tr><td>IoU per tooth</td><td class="big">0.25</td><td class="big t">0.27</td></tr>
+        <tr><td>F2 per tooth</td><td class="big">0.45</td><td class="big t">0.46</td></tr>
         <tr><td>Also gives</td><td>only the mask</td><td class="t">a coverage grade, 0 to 5</td></tr>
       </tbody>
     </table>
   </div>
-  <p class="callout">Less accurate than the server pipeline, but small enough to run on the phone, and it adds a coverage grade. Its weak point is small plaque spots.</p>
-  <p class="src">Unseen teeth: the held-out fold of 5-fold cross-validation, 1,116 tooth crops, 117 with plaque; IoU averaged over the teeth with plaque. Reference: SAM2-Adapter with self-training, 10-fold cross-validation, scored on the teeth merged back into one mask per photo.</p>
-  <aside class="notes">My plaque model. It looks at one tooth at a time, padded to keep its shape, and outputs a plaque mask and a coverage grade from 0 to 5. It is a UNet++ with an EfficientNet-B4 encoder, about 20 million parameters, trained on 5,581 tooth crops from 495 photos, with a loss that favours finding plaque. On teeth it never saw in training its IoU is 0.18, below the 0.25 of the SAM2 pipeline in Ziyun's paper. That pipeline also works tooth by tooth, but it enlarges every tooth to 1024 pixels for a large SAM2 model on a server GPU, while mine sees 256 pixels on the phone. What it gives instead is that it runs on the phone in 40 MB and grades coverage. It finds large plaque areas well and often misses small spots. If someone remembers 0.27 from August: that was computed on all crops including the training ones; this is the held-out number.</aside>
+  <p class="callout">These numbers had two errors in the training and test split: teeth from the same photo were in both, and the score included training crops. Corrected results are on the next slide.</p>
+  <p class="src">First reported: 5-fold cross-validation split by tooth, scored over all 5,581 crops with the best fold's model, IoU per plaque tooth. Reference: SAM2-Adapter with self-training (Zeng et al. 2026), 10-fold cross-validation with a random image split, plaque photos only.</p>
+  <aside class="notes">My plaque model. It looks at one tooth at a time, padded to keep its shape, and outputs a plaque mask and a coverage grade from 0 to 5. It is a UNet++ with an EfficientNet-B4 encoder, about 20 million parameters, trained on 5,581 tooth crops from 495 photos, with a loss that favours finding plaque. These are the results I first reported: IoU 0.27 and F2 0.46, which looked slightly better than the SAM2 pipeline. When I checked the evaluation I found two errors in the training and test split. The folds were split by tooth, so teeth from the same photo, and the same mouth, could be in both training and test. And the reported score was computed over all crops with the best fold's model, which includes crops it had been trained on. Both make the numbers too optimistic. The next slide shows what I did after finding this.</aside>
 </section>
 
+
+
+<!-- ============================================================ plaque: mobile architectures -->
+<section class="slide" id="s-plaque-v2" data-title="Mobile-friendly models on held-out photos">
+  <h2>Mobile-friendly models on held-out photos</h2>
+  <p class="pv-lede">After fixing the split, every model is tested only on photos it never saw: 5 folds split by photo. I retrained the current model and several recent mobile-friendly architectures; some also get <b>high-res</b> crops, cut from the full-resolution photos instead of the 512-px copies.</p>
+  <table class="pv" id="pv-table">
+    <thead><tr><th>Encoder</th><th>Crops</th><th class="n">IoU per tooth</th><th class="n">IoU per photo</th><th class="n">IoU pooled</th><th class="n">F2 per tooth</th><th class="n">F2 pooled</th><th class="n">Size on phone</th><th class="n">ms per tooth</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <p class="pv-line" id="pv-line"></p>
+  <p class="src">5-fold cross-validation split by photo, mean of the test folds; best per column in red. Size: verified TensorFlow Lite file, float16; * float32, because the float16 conversion did not yet give correct masks. ms per tooth: TensorFlow Lite on a laptop CPU, 4 threads; a phone is slower. Reference: SAM2 pipeline IoU 0.25, F2 0.45 under a random image split (Zeng et al. 2026).</p>
+  <aside class="notes" id="pv-notes">After noticing the evaluation error I retrained under a strict protocol: five folds split by photo, a separate validation set for the best epoch and the threshold, every model on the same folds so the comparison is paired. I tried recent mobile-friendly encoders: MobileNetV4 from Google, FastViT and MobileCLIP from Apple, RepViT, HGNetV2, EfficientViT, and EfficientSAM. The biggest single gain came not from the architecture but from the input: cutting the tooth crops from the full-resolution photos instead of the 512-pixel copies. Each model is also converted to TensorFlow Lite and checked against the PyTorch output on real teeth, so the sizes and speeds are for files that actually work. The remaining models are still training.</aside>
+</section>
 
 
 <!-- ============================================================ gums -->
@@ -910,6 +937,23 @@ setInterval(() => { if (notesWin && !notesWin.closed && t0){ const s = Math.floo
     ims.forEach((im, i) => im.classList.toggle('on', i === s));
     $('#pp-text').innerHTML = `<p>${TXT[s]}</p>`;
   };
+})();
+
+/* ---------------- plaque: mobile architectures (filled by scripts/fill-plaque-v2.py) ---------------- */
+const PLAQUE_V2 = [{"key":"b4_256","enc":"EfficientNet-B4 (current model)","year":"2019","crops":"low-res","done":true,"tooth":0.134,"photo":0.128,"pooled":0.165,"f2":0.236,"f2pooled":0.372,"params":20.9,"mb":40.3,"kind":"float16","ms":54.9},{"key":"mnv4l_384","enc":"MobileNetV4-L","year":"2024","crops":"low-res","done":true,"tooth":0.13,"photo":0.112,"pooled":0.135,"f2":0.233,"f2pooled":0.345,"params":39.5,"mb":79.0,"kind":"float16","ms":76.0},{"key":"b4_hr512","enc":"EfficientNet-B4","year":"2019","crops":"high-res","done":true,"tooth":0.161,"photo":0.141,"pooled":0.144,"f2":0.297,"f2pooled":0.342,"params":20.9,"mb":80.4,"kind":"float32","ms":206.0},{"key":"fastvit_hr512","enc":"FastViT","year":"2023","crops":"high-res","done":true,"tooth":0.147,"photo":0.136,"pooled":0.146,"f2":0.261,"f2pooled":0.335,"params":23.6,"mb":94.7,"kind":"float32","ms":180.0},{"key":"mnv4l_hr512","enc":"MobileNetV4-L","year":"2024","crops":"high-res","done":false},{"key":"repvit_hr512","enc":"RepViT","year":"2024","crops":"high-res","done":false},{"key":"mci2_hr512","enc":"MobileCLIP","year":"2024","crops":"high-res","done":false},{"key":"hgnetv2_hr512","enc":"HGNetV2","year":"2024","crops":"high-res","done":false},{"key":"effvit_hr512","enc":"EfficientViT","year":"2023","crops":"high-res","done":false},{"key":"effsam_hr512","enc":"EfficientSAM","year":"2024","crops":"high-res","done":false}];
+(function(){
+  const body = $('#pv-table tbody'); if (!body) return;
+  const done = PLAQUE_V2.filter(r => r.done), wait = PLAQUE_V2.filter(r => !r.done);
+  const best = k => Math.max(...done.map(r => r[k] ?? -1));
+  const fmt = v => v == null ? '–' : v.toFixed(3);
+  body.innerHTML = done.map(r => `<tr class="${r.key === 'b4_256' ? 'base' : ''}"><td>${r.enc} <span class="yr">${r.year}</span></td><td>${r.crops}</td>` +
+    ['tooth', 'photo', 'pooled', 'f2', 'f2pooled'].map(k => `<td class="n${r[k] === best(k) ? ' best' : ''}">${fmt(r[k])}</td>`).join('') +
+    `<td class="n">${r.mb ? `${Math.round(r.mb)} MB${r.kind === 'float32' ? ' *' : ''}` : '–'}</td><td class="n">${r.ms ? Math.round(r.ms) : '–'}</td></tr>`).join('') +
+    (wait.length ? `<tr class="wait"><td colspan="9">Still training: ${wait.map(r => `${r.enc} (${r.crops})`).join(', ')}</td></tr>` : '');
+  const b = done.find(r => r.key === 'b4_256'), h = done.find(r => r.key === 'b4_hr512');
+  const top = done.reduce((a, r) => (r.tooth > a.tooth ? r : a), done[0] || {});
+  $('#pv-line').innerHTML = b && h ? `Same model, sharper crops: IoU per tooth ${b.tooth.toFixed(3)} → ${h.tooth.toFixed(3)} (${h.tooth > b.tooth ? '+' : ''}${Math.round(100 * (h.tooth / b.tooth - 1))}%). The input mattered more than the architecture.` +
+ '' : '';
 })();
 
 /* ---------------- mouth detector: the problem, then how the labels were made ---------------- */
