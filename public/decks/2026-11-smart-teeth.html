@@ -467,7 +467,7 @@ svg .tick{fill:var(--ink-3)}
   </table>
   <p class="pv-line" id="pv-line"></p>
   <p class="src">5-fold cross-validation split by photo, mean of the test folds; best per column in red. Size: verified TensorFlow Lite file, float16; * float32, because the float16 conversion did not yet give correct masks. ms per tooth: TensorFlow Lite on a laptop CPU, 4 threads; a phone is slower. Reference: SAM2 pipeline IoU 0.25, F2 0.45 under a random image split (Zeng et al. 2026).</p>
-  <aside class="notes" id="pv-notes">After noticing the evaluation error I retrained under a strict protocol: five folds split by photo, a separate validation set for the best epoch and the threshold, every model on the same folds so the comparison is paired. I tried recent mobile-friendly encoders: MobileNetV4 from Google, FastViT and MobileCLIP from Apple, RepViT, HGNetV2, EfficientViT, and EfficientSAM. The biggest single gain came not from the architecture but from the input: cutting the tooth crops from the full-resolution photos instead of the 512-pixel copies. Each model is also converted to TensorFlow Lite and checked against the PyTorch output on real teeth, so the sizes and speeds are for files that actually work. The remaining models are still training.</aside>
+  <aside class="notes" id="pv-notes">After noticing the evaluation error I retrained under a strict protocol: five folds split by photo, a separate validation set for the best epoch and the threshold, every model on the same folds so the comparison is paired. Shown here: the current model, MobileNetV4 from Google and FastViT from Apple, on low-res and high-res crops. The biggest single gain came not from the architecture but from the input: cutting the tooth crops from the full-resolution photos instead of the 512-pixel copies. Each model is also converted to TensorFlow Lite and checked against the PyTorch output on real teeth, so the sizes and speeds are for files that actually work.</aside>
 </section>
 
 
@@ -948,8 +948,7 @@ const PLAQUE_V2 = [{"key":"b4_256","enc":"EfficientNet-B4 (current model)","year
   const fmt = v => v == null ? '–' : v.toFixed(3);
   body.innerHTML = done.map(r => `<tr class="${r.key === 'b4_256' ? 'base' : ''}"><td>${r.enc} <span class="yr">${r.year}</span></td><td>${r.crops}</td>` +
     ['tooth', 'photo', 'pooled', 'f2', 'f2pooled'].map(k => `<td class="n${r[k] === best(k) ? ' best' : ''}">${fmt(r[k])}</td>`).join('') +
-    `<td class="n">${r.mb ? `${Math.round(r.mb)} MB${r.kind === 'float32' ? ' *' : ''}` : '–'}</td><td class="n">${r.ms ? Math.round(r.ms) : '–'}</td></tr>`).join('') +
-    (wait.length ? `<tr class="wait"><td colspan="9">Still training: ${wait.map(r => `${r.enc} (${r.crops})`).join(', ')}</td></tr>` : '');
+    `<td class="n">${r.mb ? `${Math.round(r.mb)} MB${r.kind === 'float32' ? ' *' : ''}` : '–'}</td><td class="n">${r.ms ? Math.round(r.ms) : '–'}</td></tr>`).join('');
   const b = done.find(r => r.key === 'b4_256'), h = done.find(r => r.key === 'b4_hr512');
   const top = done.reduce((a, r) => (r.tooth > a.tooth ? r : a), done[0] || {});
   $('#pv-line').innerHTML = b && h ? `Same model, sharper crops: IoU per tooth ${b.tooth.toFixed(3)} → ${h.tooth.toFixed(3)} (${h.tooth > b.tooth ? '+' : ''}${Math.round(100 * (h.tooth / b.tooth - 1))}%). The input mattered more than the architecture.` +
