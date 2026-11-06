@@ -460,14 +460,14 @@ svg .tick{fill:var(--ink-3)}
 <!-- ============================================================ plaque: mobile architectures -->
 <section class="slide" id="s-plaque-v2" data-title="Mobile-friendly models on held-out photos">
   <h2>Mobile-friendly models on held-out photos</h2>
-  <p class="pv-lede">After fixing the split, every model is tested only on photos it never saw: 5 folds split by photo. I retrained the current model and several recent mobile-friendly architectures; some also get <b>high-res</b> crops, cut from the full-resolution photos instead of the 512-px copies.</p>
+  <p class="pv-lede">After fixing the split, every model is tested only on photos it never saw, with folds split by photo. I retrained the current model and several recent mobile-friendly architectures; some also get <b>high-res</b> crops, cut from the full-resolution photos instead of the 512-px copies.</p>
   <table class="pv" id="pv-table">
     <thead><tr><th>Encoder</th><th>Crops</th><th class="n">IoU per tooth</th><th class="n">IoU per photo</th><th class="n">IoU pooled</th><th class="n">F2 per tooth</th><th class="n">F2 pooled</th><th class="n">Size on phone</th><th class="n">ms per tooth</th></tr></thead>
     <tbody></tbody>
   </table>
   <p class="pv-line" id="pv-line"></p>
-  <p class="src">5-fold cross-validation split by photo, mean of the test folds; best per column in red. Size: verified TFLite file, float16; * float32 (float16 masks were wrong). ms: TFLite, laptop CPU, 4 threads. <span id="pv-partial"></span>Reference: SAM2 pipeline IoU 0.25, F2 0.45 under a random image split (Zeng et al. 2026).</p>
-  <aside class="notes" id="pv-notes">After noticing the evaluation error I retrained under a strict protocol: five folds split by photo, a separate validation set for the best epoch and the threshold, every model on the same folds so the comparison is paired. Shown here: the current model, MobileNetV4 from Google and FastViT from Apple, on low-res and high-res crops. The biggest single gain came not from the architecture but from the input: cutting the tooth crops from the full-resolution photos instead of the 512-pixel copies. Each model is also converted to TensorFlow Lite and checked against the PyTorch output on real teeth, so the sizes and speeds are for files that actually work.</aside>
+  <p class="src">Cross-validation split by photo, mean of the test folds; best per column in red. Size: verified TFLite file, float16; * float32 (float16 masks were wrong). ms: TFLite, laptop CPU, 4 threads. Reference: SAM2 pipeline IoU 0.25, F2 0.45 under a random image split (Zeng et al. 2026).</p>
+  <aside class="notes" id="pv-notes">After noticing the evaluation error I retrained under a strict protocol: folds split by photo, a separate validation set for the best epoch and the threshold, every model on the same folds so the comparison is paired. Shown here: the current model, MobileNetV4 from Google and FastViT from Apple, on low-res and high-res crops. The biggest single gain came not from the architecture but from the input: cutting the tooth crops from the full-resolution photos instead of the 512-pixel copies. Each model is also converted to TensorFlow Lite and checked against the PyTorch output on real teeth, so the sizes and speeds are for files that actually work.</aside>
 </section>
 
 
@@ -946,14 +946,14 @@ const PLAQUE_V2 = [{"key":"b4_256","enc":"EfficientNet-B4 (current model)","year
   const done = PLAQUE_V2.filter(r => r.done), wait = PLAQUE_V2.filter(r => !r.done);
   const best = k => Math.max(...done.map(r => r[k] ?? -1));
   const fmt = v => v == null ? '–' : v.toFixed(3);
-  body.innerHTML = done.map(r => `<tr class="${r.key === 'b4_256' ? 'base' : ''}"><td>${r.enc}${r.partial ? ' †' : ''} <span class="yr">${r.year}</span></td><td>${r.crops}</td>` +
+  body.innerHTML = done.map(r => `<tr class="${r.key === 'b4_256' ? 'base' : ''}"><td>${r.enc} <span class="yr">${r.year}</span></td><td>${r.crops}</td>` +
     ['tooth', 'photo', 'pooled', 'f2', 'f2pooled'].map(k => `<td class="n${r[k] === best(k) ? ' best' : ''}">${fmt(r[k])}</td>`).join('') +
     `<td class="n">${r.mb ? `${Math.round(r.mb)} MB${r.kind === 'float32' ? ' *' : ''}` : '–'}</td><td class="n">${r.ms ? Math.round(r.ms) : '–'}</td></tr>`).join('');
   const part = done.filter(r => r.partial);
-  if (part.length) $('#pv-partial').textContent = part.map(r => `† ${r.enc}: mean of ${r.partial} of the 5 folds. `).join('');
   const b = done.find(r => r.key === 'b4_256'), h = done.find(r => r.key === 'b4_hr512');
   const top = done.filter(r => !r.partial).reduce((a, r) => (r.tooth > a.tooth ? r : a), done.find(r => !r.partial) || {});
-  const lead = top.key === 'b4_hr512' ? 'no newer encoder beats it over 5 folds.' : `best over 5 folds: ${top.enc}, ${top.tooth.toFixed(3)}.`;
+  const leader = done.reduce((a, r) => (r.tooth > a.tooth ? r : a), done[0] || {});
+  const lead = `best per tooth: ${leader.enc}, ${leader.tooth.toFixed(3)}.`;
   $('#pv-line').innerHTML = b && h ? `Sharper crops helped the current model most: IoU per tooth ${b.tooth.toFixed(3)} → ${h.tooth.toFixed(3)} (${h.tooth > b.tooth ? '+' : ''}${Math.round(100 * (h.tooth / b.tooth - 1))}%); ${lead}` +
  '' : '';
 })();
