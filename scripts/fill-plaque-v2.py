@@ -20,7 +20,8 @@ MODELS = [  # key, encoder label, year, crops
     ("repvit_hr512", "RepViT", "2024", "high-res"),
     ("mci2_hr512", "MobileCLIP", "2024", "high-res"),
     ("hgnetv2_hr512", "HGNetV2", "2024", "high-res"),
-    ("effvit_hr512", "EfficientViT", "2023", "high-res"),
+    ("effvit_hr512", "EfficientViT-B2", "2023", "high-res"),
+    ("effvitb3_hr512", "EfficientViT-B3", "2023", "high-res"),
     ("effsam_hr512", "EfficientSAM", "2024", "high-res"),
 ]
 
@@ -34,7 +35,8 @@ rows = []
 for key, enc, year, crops in MODELS:
     s = load(SRC / "outputs_v2_fetched" / key / "summary.json")
     c = load(SRC / "reports" / "conversion" / f"{key}.json") or {}
-    r = dict(key=key, enc=enc, year=year, crops=crops, done=bool(s))
+    # a model is shown only once it has finished training and its TFLite conversion has been attempted
+    r = dict(key=key, enc=enc, year=year, crops=crops, done=bool(s) and bool(c))
     if s:
         r.update(tooth=round(s["tooth_iou"]["mean"], 3), photo=round(s["photo_iou"]["mean"], 3), pooled=round(s["pooled_iou"]["mean"], 3),
                  f2=round(s["tooth_f2"]["mean"], 3), f2pooled=round(s["pooled_f2"]["mean"], 3), params=round(s["config"].get("params_m") or 0, 1))
